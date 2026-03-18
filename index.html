@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Valo Trainer</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#ff4655;--red-dark:#c0392b;--gold:#e8c97a;
+  --white:#ece8e1;--gray:#9b9b9b;--dark:#0f1923;
+  --dark2:#1a2634;--dark3:#243447;--accent:#00c8ff;
+  --green:#4ade80;--purple:#a78bfa;
+  --coin:#f4c430;--coin-dark:#c9960a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--dark);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:68px;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:0;}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;background:var(--dark);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.sp-studio{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(32px,8vw,76px);letter-spacing:6px;text-transform:uppercase;opacity:0;animation:spIn .8s ease .3s forwards;}
+.sp-dot{color:var(--red);}
+.sp-sub{font-size:clamp(10px,2vw,16px);letter-spacing:8px;color:var(--gray);text-transform:uppercase;font-weight:300;opacity:0;animation:spIn .6s ease 1.1s forwards;margin-top:6px;}
+.sp-line{width:0;height:2px;background:var(--red);animation:spLine .6s ease .9s forwards;margin:18px 0;}
+.sp-valo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(24px,6vw,56px);letter-spacing:4px;text-transform:uppercase;opacity:0;animation:spIn .8s ease 1.6s forwards;}
+.sp-valo span{color:var(--red);}
+.sp-tag{font-size:clamp(9px,1.5vw,13px);letter-spacing:5px;color:var(--gray);text-transform:uppercase;opacity:0;animation:spIn .6s ease 2.2s forwards;margin-top:4px;}
+.sp-bar{width:180px;height:2px;background:rgba(255,255,255,0.1);margin-top:36px;border-radius:2px;overflow:hidden;opacity:0;animation:spIn .4s ease 2.4s forwards;}
+.sp-fill{height:100%;width:0;background:var(--red);animation:spLoad 1s ease 2.5s forwards;}
+@keyframes spIn{to{opacity:1;}}
+@keyframes spLine{to{width:110px;}}
+@keyframes spLoad{to{width:100%;}}
+
+/* SETUP SCREEN */
+#setup-screen{display:none;}
+#setup-screen.show{display:flex!important;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:500;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,70,85,0.2);background:rgba(15,25,35,0.97);backdrop-filter:blur(12px);}
+.logo{display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.logo svg{width:30px;height:30px;}
+.logo-text h1{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;letter-spacing:2px;text-transform:uppercase;}
+.logo-text h1 span{color:var(--red);}
+.logo-text small{font-size:8px;letter-spacing:2px;color:var(--gray);text-transform:uppercase;}
+.hud{display:flex;align-items:center;gap:10px;}
+.hud-xp{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:var(--gold);}
+.hud-xp span{font-size:9px;letter-spacing:2px;color:var(--gray);font-family:'Barlow',sans-serif;font-weight:400;text-transform:uppercase;margin-right:2px;}
+.hud-coins{display:flex;align-items:center;gap:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.hud-coins-icon{width:18px;height:18px;border-radius:50%;background:var(--coin);border:2px solid var(--coin-dark);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:9px;color:var(--dark);flex-shrink:0;}
+.hud-coins-val{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;color:var(--coin);}
+.rank-pill{padding:4px 10px;border:1px solid var(--red);background:rgba(255,70,85,0.1);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;color:var(--red);text-transform:uppercase;}
+.avatar-btn{width:34px;height:34px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid rgba(255,70,85,0.4);background:var(--dark3);flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+.avatar-btn img{width:100%;height:100%;object-fit:cover;}
+
+/* DAILY BANNER */
+#daily-banner{background:linear-gradient(90deg,rgba(255,70,85,0.1),rgba(232,201,122,0.06),rgba(255,70,85,0.1));border-bottom:1px solid rgba(255,70,85,0.15);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;position:relative;z-index:9;}
+.streak-txt{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--white);}
+.streak-txt span{color:var(--gold);}
+.streak-dots{display:flex;gap:4px;}
+.sdot{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:9px;}
+.sdot.done{background:rgba(255,70,85,0.25);border-color:var(--red);}
+.sdot.today{background:var(--red);border-color:var(--red);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(255,70,85,0.5);}50%{box-shadow:0 0 16px rgba(255,70,85,0.8);}}
+.banner-right{font-size:10px;color:var(--gray);}
+
+/* MAIN */
+main{position:relative;z-index:5;max-width:900px;margin:0 auto;padding:20px 14px 24px;}
+.screen{display:none;animation:fadeUp .25s ease forwards;}
+.screen.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* SECTION HEADER */
+.sec-hdr{margin-bottom:20px;}
+.sec-hdr .ey{font-size:9px;letter-spacing:4px;color:var(--red);text-transform:uppercase;font-weight:600;margin-bottom:4px;}
+.sec-hdr h2{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;text-transform:uppercase;letter-spacing:1px;}
+.sec-hdr p{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.6;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);cursor:pointer;background:none;border:none;font-family:'Barlow Condensed',sans-serif;font-weight:600;margin-bottom:18px;-webkit-tap-highlight-color:transparent;}
+
+/* HOME */
+.home-hero{text-align:center;padding:28px 0 20px;}
+.home-hero .ey{font-size:9px;letter-spacing:4px;color:var(--red);text-transform:uppercase;font-weight:600;margin-bottom:10px;}
+.home-hero h2{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(36px,10vw,72px);text-transform:uppercase;line-height:.9;letter-spacing:-1px;margin-bottom:12px;}
+.home-hero h2 span{color:var(--red);}
+.home-hero p{font-size:13px;color:var(--gray);max-width:400px;margin:0 auto 24px;line-height:1.7;}
+.modules-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mod-card{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:16px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent;}
+.mod-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--red);transform:scaleY(0);transition:transform .2s;transform-origin:bottom;}
+.mod-card:active{background:var(--dark3);border-color:rgba(255,70,85,0.4);}
+.mod-card:active::before{transform:scaleY(1);}
+.mod-card.ac::before{background:var(--purple);}
+.mod-card.video-card::before{background:var(--accent);}
+.mod-icon{font-size:22px;margin-bottom:8px;}
+.mod-card h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.mod-card p{font-size:11px;color:var(--gray);line-height:1.5;}
+.mod-tag{display:inline-block;margin-top:8px;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--red);font-weight:600;}
+.mod-card.ac .mod-tag{color:var(--purple);}
+.mod-card.video-card .mod-tag{color:var(--accent);}
+.aim-card::before{background:var(--red)!important;}
+.aim-card:active{border-color:rgba(255,70,85,0.6)!important;}
+
+/* RADIANTE COIN ICON */
+.rc-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--coin);border:1.5px solid var(--coin-dark);font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:8px;color:var(--dark);flex-shrink:0;vertical-align:middle;}
+
+/* COIN SHOP MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--dark2);border:1px solid rgba(255,255,255,0.1);border-top:2px solid var(--red);padding:24px;width:100%;max-width:340px;}
+.modal-box h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;}
+.modal-input{width:100%;background:var(--dark);border:1px solid rgba(255,255,255,0.15);color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;padding:12px 14px;outline:none;margin-bottom:14px;}
+.modal-input:focus{border-color:var(--red);}
+.modal-btns{display:flex;gap:8px;}
+.modal-btns button{flex:1;padding:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:none;}
+.modal-save{background:var(--red);color:white;}
+.modal-cancel{background:transparent;border:1px solid rgba(255,255,255,0.15)!important;color:var(--gray);}
+
+/* COIN SHOP */
+.shop-item{background:var(--dark);border:1px solid rgba(244,196,48,0.2);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;-webkit-tap-highlight-color:transparent;}
+.shop-item:active{border-color:rgba(244,196,48,0.6);background:rgba(244,196,48,0.05);}
+.shop-item-icon{font-size:24px;flex-shrink:0;}
+.shop-item-info{flex:1;}
+.shop-item-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:1px;}
+.shop-item-desc{font-size:11px;color:var(--gray);margin-top:2px;}
+.shop-item-cost{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:var(--coin);display:flex;align-items:center;gap:4px;flex-shrink:0;}
+
+/* PROFILE SCREEN */
+.profile-hero{display:flex;align-items:center;gap:16px;padding:20px;background:var(--dark2);border:1px solid rgba(255,255,255,0.07);margin-bottom:16px;position:relative;}
+.prof-avatar{width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid var(--red);flex-shrink:0;background:var(--dark3);cursor:pointer;position:relative;}
+.prof-avatar img{width:100%;height:100%;object-fit:cover;}
+.prof-avatar-edit{position:absolute;bottom:0;right:0;background:var(--red);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.prof-info{flex:1;min-width:0;}
+.prof-name-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.prof-name{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:20px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prof-edit-btn{background:none;border:none;color:var(--gray);cursor:pointer;font-size:14px;flex-shrink:0;padding:2px;}
+.prof-email{font-size:11px;color:var(--gray);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prof-rank{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;color:var(--red);text-transform:uppercase;}
+.prof-logout{position:absolute;top:12px;right:12px;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--gray);font-size:10px;letter-spacing:1px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:4px 10px;cursor:pointer;}
+.prof-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.pstat{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:12px;text-align:center;}
+.pstat .n{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;color:var(--gold);}
+.pstat .n.coin{color:var(--coin);}
+.pstat .l{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-top:2px;}
+
+/* HISTORY */
+.hist-item{background:var(--dark2);border:1px solid rgba(255,255,255,0.06);padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.hist-icon{font-size:18px;flex-shrink:0;}
+.hist-info{flex:1;}
+.hist-title{font-size:12px;font-weight:500;}
+.hist-date{font-size:10px;color:var(--gray);}
+.hist-reward{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:var(--coin);display:flex;align-items:center;gap:3px;flex-shrink:0;}
+
+/* ACHIEVEMENTS */
+.ach-section{margin-bottom:20px;}
+.ach-section-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.ach-section-title::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.07);}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;}
+.ach-card{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:12px 8px;text-align:center;transition:all .2s;position:relative;}
+.ach-card.unlocked{border-color:rgba(232,201,122,0.4);background:rgba(232,201,122,0.04);}
+.ach-card.unlocked .ach-icon{filter:none;}
+.ach-icon{font-size:28px;display:block;margin-bottom:6px;filter:grayscale(1) opacity(0.3);}
+.ach-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--gray);line-height:1.3;}
+.ach-card.unlocked .ach-name{color:var(--gold);}
+.ach-card .ach-lock{position:absolute;top:4px;right:4px;font-size:8px;color:var(--gray);}
+
+/* UNLOCK TOAST */
+#unlock-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--dark3);border:1px solid rgba(232,201,122,0.5);border-top:2px solid var(--gold);padding:12px 20px;z-index:8999;opacity:0;transition:all .4s;pointer-events:none;text-align:center;min-width:220px;}
+#unlock-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.ut-icon{font-size:28px;display:block;margin-bottom:4px;}
+.ut-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);}
+.ut-name{font-size:13px;color:var(--white);margin-top:2px;}
+
+/* XP TOAST */
+#xp-toast{position:fixed;top:70px;right:14px;background:var(--dark3);border:1px solid rgba(232,201,122,0.4);padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--gold);z-index:9998;opacity:0;transform:translateY(-8px);transition:all .3s;pointer-events:none;}
+#xp-toast.show{opacity:1;transform:translateY(0);}
+
+/* COIN TOAST */
+#coin-toast{position:fixed;top:70px;left:14px;background:var(--dark3);border:1px solid rgba(244,196,48,0.4);padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--coin);z-index:9998;opacity:0;transform:translateY(-8px);transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+#coin-toast.show{opacity:1;transform:translateY(0);}
+
+/* FRIENDS */
+.friend-code-box{background:var(--dark2);border:1px solid rgba(255,255,255,0.08);border-left:3px solid var(--accent);padding:16px;margin-bottom:14px;}
+.fc-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:6px;}
+.fc-code{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;letter-spacing:6px;color:var(--white);}
+.fc-copy-btn{margin-top:8px;padding:8px 16px;background:rgba(0,200,255,0.1);border:1px solid rgba(0,200,255,0.3);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+
+/* QUIZ */
+.q-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.q-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--red);}
+.q-bar-wrap{flex:1;margin:0 14px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;}
+.q-bar-fill{height:100%;background:var(--red);transition:width .4s;}
+.q-counter{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--gray);}
+.scen-box{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);border-left:3px solid var(--red);padding:18px 16px;margin-bottom:14px;}
+.scen-tag{display:inline-flex;align-items:center;gap:5px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px;}
+.scen-tag::before{content:'';width:5px;height:5px;background:var(--gold);border-radius:50%;flex-shrink:0;}
+.scen-box h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.scen-box p{color:var(--gray);font-size:13px;line-height:1.7;}
+.scen-info{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.info-chip{font-size:10px;color:var(--gray);background:rgba(255,255,255,0.04);padding:4px 9px;border:1px solid rgba(255,255,255,0.07);}
+.info-chip strong{color:var(--accent);}
+.opts-grid{display:grid;gap:7px;}
+.opt-btn{background:var(--dark2);border:1px solid rgba(255,255,255,0.08);padding:14px 16px;text-align:left;cursor:pointer;transition:all .18s;display:flex;align-items:flex-start;gap:10px;color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;line-height:1.5;width:100%;min-height:50px;-webkit-tap-highlight-color:transparent;}
+.opt-btn:active:not(:disabled){border-color:rgba(255,70,85,0.5);background:var(--dark3);}
+.opt-btn:disabled{cursor:default;}
+.opt-btn.correct{border-color:var(--green);background:rgba(74,222,128,0.07);}
+.opt-btn.wrong{border-color:var(--red);background:rgba(255,70,85,0.07);}
+.opt-l{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;color:var(--red);min-width:18px;line-height:1.2;}
+.opt-btn.correct .opt-l{color:var(--green);}
+.fb-box{margin-top:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.07);display:none;}
+.fb-box.show{display:block;animation:fadeUp .3s ease;}
+.fb-box.cfb{border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.04);}
+.fb-box.wfb{border-color:rgba(255,70,85,0.3);background:rgba(255,70,85,0.04);}
+.fb-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:5px;}
+.fb-box.cfb .fb-title{color:var(--green);}
+.fb-box.wfb .fb-title{color:var(--red);}
+.fb-text{font-size:12px;color:var(--gray);line-height:1.7;}
+.tip-box{margin-top:8px;padding:9px 12px;background:rgba(232,201,122,0.05);border-left:2px solid var(--gold);font-size:11px;color:rgba(232,201,122,0.85);line-height:1.6;}
+.nxt-btn{margin-top:14px;padding:14px 28px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:none;width:100%;-webkit-tap-highlight-color:transparent;}
+.nxt-btn.show{display:block;}
+
+/* AGENTS */
+.agents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ag-card{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s;position:relative;-webkit-tap-highlight-color:transparent;}
+.ag-card:active{background:var(--dark3);border-color:rgba(167,139,250,0.4);}
+.ag-card.done{border-color:rgba(74,222,128,0.35);}
+.ag-emoji{font-size:36px;display:block;margin-bottom:8px;}
+.ag-name{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+.ag-role{font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:10px;}
+.ag-role.controller{color:var(--purple);}
+.ag-role.duelist{color:#f87171;}
+.ag-role.sentinel{color:#60a5fa;}
+.ag-role.initiator{color:var(--green);}
+.ag-start{display:inline-block;padding:6px 14px;border:1px solid rgba(167,139,250,0.4);background:rgba(167,139,250,0.08);color:var(--purple);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
+.ag-card.done .ag-start{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);color:var(--green);}
+.ag-done-stamp{position:absolute;top:6px;right:6px;font-size:9px;letter-spacing:1px;color:var(--green);font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;}
+.change-agents-btn{width:100%;margin-top:12px;padding:12px;background:rgba(244,196,48,0.08);border:1px solid rgba(244,196,48,0.3);color:var(--coin);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;}
+.change-agents-btn:active{background:rgba(244,196,48,0.15);}
+
+/* agent quiz hdr */
+.aq-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--dark2);border:1px solid rgba(167,139,250,0.2);border-left:3px solid var(--purple);margin-bottom:16px;}
+.aq-emoji{font-size:30px;}
+.aq-info h3{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:17px;text-transform:uppercase;letter-spacing:1px;}
+.aq-info p{font-size:10px;color:var(--purple);letter-spacing:2px;text-transform:uppercase;}
+
+/* GLOSSARY */
+.glo-search{position:relative;margin-bottom:16px;}
+.glo-search input{width:100%;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);padding:12px 14px 12px 38px;color:var(--white);font-family:'Barlow',sans-serif;font-size:14px;outline:none;}
+.glo-search input:focus{border-color:var(--red);}
+.glo-search input::placeholder{color:var(--gray);}
+.glo-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray);}
+.glo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;}
+.term-card{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:14px;}
+.term-abbr{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:var(--red);margin-bottom:2px;}
+.term-full{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:7px;font-weight:600;}
+.term-desc{font-size:12px;color:var(--gray);line-height:1.6;}
+.term-tag{display:inline-block;margin-top:7px;font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid rgba(255,255,255,0.1);color:var(--gray);text-transform:uppercase;}
+
+/* TIPS */
+.tips-list{display:grid;gap:10px;}
+.tip-card{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:18px 20px;display:flex;gap:14px;}
+.tip-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:32px;color:rgba(255,70,85,0.2);line-height:1;min-width:40px;}
+.tip-content h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+.tip-content p{font-size:12px;color:var(--gray);line-height:1.7;}
+
+/* RESULTS */
+.res-screen{text-align:center;padding:40px 16px 20px;}
+.res-grade{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(64px,18vw,110px);line-height:1;background:linear-gradient(135deg,var(--red),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.res-rank{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;}
+.res-desc{font-size:13px;color:var(--gray);max-width:360px;margin:0 auto 20px;line-height:1.7;}
+.xp-flash{display:inline-block;padding:7px 18px;background:rgba(232,201,122,0.08);border:1px solid rgba(232,201,122,0.3);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;margin-bottom:8px;}
+.coin-flash{display:inline-block;padding:7px 18px;background:rgba(244,196,48,0.08);border:1px solid rgba(244,196,48,0.3);color:var(--coin);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.res-stats{display:flex;justify-content:center;gap:24px;margin-bottom:28px;}
+.rstat .n{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:32px;}
+.rstat .l{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);}
+.btn-red{padding:13px 28px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.btn-ghost{padding:13px 28px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-left:8px;-webkit-tap-highlight-color:transparent;}
+
+/* VIDEOS SCREEN */
+.video-daily-card{background:var(--dark2);border:1px solid rgba(0,200,255,0.2);border-left:3px solid var(--accent);padding:0;overflow:hidden;margin-bottom:16px;position:relative;}
+.video-daily-badge{position:absolute;top:10px;left:10px;z-index:2;background:var(--accent);color:var(--dark);font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:3px 8px;}
+.video-daily-badge-swap{position:absolute;top:10px;right:10px;z-index:2;background:rgba(244,196,48,0.15);border:1px solid rgba(244,196,48,0.4);color:var(--coin);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;}
+.video-embed{width:100%;aspect-ratio:16/9;background:#000;border:none;}
+.video-info{padding:14px 16px;}
+.video-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.video-desc{font-size:12px;color:var(--gray);line-height:1.6;}
+.video-meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.video-chip{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border:1px solid rgba(0,200,255,0.2);color:var(--accent);}
+
+/* CALLOUT */
+.co-opt{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:13px 14px;cursor:pointer;color:var(--white);font-size:13px;text-align:left;font-family:'Barlow',sans-serif;width:100%;display:block;min-height:48px;-webkit-tap-highlight-color:transparent;}
+.co-opt:active:not(:disabled){border-color:rgba(0,200,255,0.4);background:var(--dark3);}
+.co-opt.cc{border-color:var(--green);background:rgba(74,222,128,0.07);color:var(--green);}
+.co-opt.wc{border-color:var(--red);background:rgba(255,70,85,0.07);color:var(--red);}
+.co-grid{display:grid;gap:7px;margin-top:10px;}
+
+/* BOTTOM NAV */
+#bot-nav{position:fixed;bottom:0;left:0;right:0;z-index:600;background:rgba(15,25,35,0.98);backdrop-filter:blur(16px);border-top:1px solid rgba(255,70,85,0.2);display:flex;padding:4px 0 max(4px,env(safe-area-inset-bottom));}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;border:none;background:none;color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;min-height:50px;-webkit-tap-highlight-color:transparent;}
+.bnav .bi{font-size:18px;line-height:1;}
+.bnav.on{color:var(--red);}
+.bnav.on .bi{filter:drop-shadow(0 0 4px var(--red));}
+
+/* SETTINGS */
+.settings-section{margin-bottom:20px;}
+.settings-section h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--dark2);border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;cursor:pointer;}
+.setting-label{font-size:13px;}
+.setting-value{font-size:11px;color:var(--gray);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
+.toggle-row{display:flex;align-items:center;gap:8px;}
+.toggle{width:38px;height:20px;background:var(--dark3);border:1px solid rgba(255,255,255,0.15);border-radius:10px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:var(--red);}
+.toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:2px;left:2px;transition:left .2s;}
+.toggle.on::after{left:20px;}
+.color-swatches{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.swatch.active{border-color:white;transform:scale(1.15);}
+
+/* VERIFIED BADGE */
+.verified{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:var(--accent);border-radius:50%;font-size:9px;margin-left:3px;flex-shrink:0;}
+
+/* GROUPS */
+.group-card{background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .18s;position:relative;}
+.group-card:active{border-color:rgba(255,70,85,0.4);}
+.group-card-top{display:flex;align-items:center;gap:10px;}
+.group-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:var(--dark3);}
+.group-info{flex:1;min-width:0;}
+.group-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:1px;}
+.group-meta{font-size:10px;color:var(--gray);margin-top:2px;}
+.group-badge{font-size:9px;padding:3px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.badge-pub{background:rgba(0,200,255,0.1);color:var(--accent);border:1px solid rgba(0,200,255,0.3);}
+.badge-priv{background:rgba(232,201,122,0.1);color:var(--gold);border:1px solid rgba(232,201,122,0.3);}
+
+/* CHAT */
+#screen-chat{padding-bottom:120px;}
+.chat-header{display:flex;align-items:center;gap:10px;padding:12px 0;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.chat-header h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;text-transform:uppercase;flex:1;}
+.chat-messages{display:flex;flex-direction:column;gap:10px;min-height:300px;}
+.chat-msg{display:flex;gap:8px;align-items:flex-start;}
+.chat-msg.mine{flex-direction:row-reverse;}
+.msg-avatar{width:30px;height:30px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--dark3);}
+.msg-avatar img{width:100%;height:100%;object-fit:cover;}
+.msg-bubble{max-width:72%;background:var(--dark2);border:1px solid rgba(255,255,255,0.07);padding:8px 12px;border-radius:2px;}
+.chat-msg.mine .msg-bubble{background:rgba(255,70,85,0.12);border-color:rgba(255,70,85,0.25);}
+.msg-name{font-size:9px;color:var(--gray);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:4px;}
+.msg-text{font-size:13px;line-height:1.5;}
+.msg-img{max-width:100%;border-radius:2px;margin-top:4px;cursor:pointer;}
+.msg-time{font-size:9px;color:var(--gray);margin-top:3px;text-align:right;}
+.chat-input-bar{position:fixed;bottom:68px;left:0;right:0;background:rgba(15,25,35,0.98);border-top:1px solid rgba(255,70,85,0.2);padding:8px 14px;display:flex;gap:8px;align-items:center;z-index:400;}
+.chat-input{flex:1;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:none;max-height:80px;}
+.chat-send-btn{padding:10px 16px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;flex-shrink:0;}
+.chat-img-btn{padding:10px;background:var(--dark3);border:1px solid rgba(255,255,255,0.1);color:var(--gray);cursor:pointer;font-size:16px;flex-shrink:0;}
+
+/* ADM PANEL */
+.adm-card{background:var(--dark2);border:1px solid rgba(255,70,85,0.2);padding:14px;margin-bottom:8px;}
+.adm-input-row{display:flex;gap:8px;margin-bottom:8px;}
+.adm-input{flex:1;background:var(--dark);border:1px solid rgba(255,255,255,0.1);color:var(--white);font-family:'Barlow Condensed',sans-serif;font-size:14px;padding:8px 12px;outline:none;}
+.adm-btn{padding:5px 10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;}
+.adm-btn.green{background:rgba(74,222,128,0.2);color:var(--green);}
+.adm-btn.red{background:rgba(255,70,85,0.2);color:var(--red);}
+.adm-card h4{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.adm-notif{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--dark);border:1px solid rgba(255,255,255,0.07);margin-bottom:6px;}
+.adm-notif-info{font-size:12px;}
+.adm-notif-btns{display:flex;gap:6px;}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <img src="logo.png" id="sp-logo" style="width:80px;height:80px;object-fit:contain;opacity:0;animation:spIn .8s ease .1s forwards;margin-bottom:16px;">
+  <div class="sp-studio">Foxy<span class="sp-dot">'</span>Studio</div>
+  <div class="sp-sub">Presents</div>
+  <div class="sp-line"></div>
+  <div class="sp-valo"><span>Valo</span> Trainer</div>
+  <div class="sp-tag">IGL Academy · Agent Mastery · Tactical Excellence</div>
+  <div class="sp-bar"><div class="sp-fill"></div></div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" style="position:fixed;inset:0;background:var(--dark);z-index:8000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;">
+  <div style="width:100%;max-width:360px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;letter-spacing:4px;text-transform:uppercase;margin-bottom:2px;text-align:center;">Foxy<span style="color:var(--red)">'</span>Studio</div>
+    <div style="font-size:10px;letter-spacing:3px;color:var(--gray);text-transform:uppercase;margin-bottom:28px;text-align:center;">Valo Trainer</div>
+    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:0;">
+      <button id="tab-login" onclick="authTab('login')" style="flex:1;padding:11px;background:none;border:none;border-bottom:2px solid var(--red);margin-bottom:-1px;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Entrar</button>
+      <button id="tab-reg" onclick="authTab('reg')" style="flex:1;padding:11px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Criar Conta</button>
+    </div>
+    <div id="pane-login" style="background:var(--dark2);border:1px solid rgba(255,255,255,0.07);border-top:none;padding:22px;">
+      <div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);font-weight:600;margin-bottom:6px;">Username</div>
+      <input id="li-user" type="text" autocomplete="username" placeholder="o_teu_username" style="width:100%;background:var(--dark);border:1px solid rgba(255,255,255,0.12);color:var(--white);font-family:'Barlow Condensed',sans-serif;font-size:16px;padding:11px 14px;outline:none;letter-spacing:1px;" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div style="margin-bottom:6px;"><div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);font-weight:600;margin-bottom:6px;">Password</div>
+      <input id="li-pass" type="password" autocomplete="current-password" placeholder="••••••••" style="width:100%;background:var(--dark);border:1px solid rgba(255,255,255,0.12);color:var(--white);font-family:'Barlow Condensed',sans-serif;font-size:16px;padding:11px 14px;outline:none;" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="li-err" style="font-size:11px;color:var(--red);min-height:18px;margin-bottom:6px;"></div>
+      <button onclick="doLogin()" id="li-btn" style="width:100%;padding:13px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;">→ Entrar</button>
+    </div>
+    <div id="pane-reg" style="background:var(--dark2);border:1px solid rgba(255,255,255,0.07);border-top:none;padding:22px;display:none;">
+      <div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);font-weight:600;margin-bottom:6px;">Nome de Exibição</div>
+      <input id="re-display" type="text" maxlength="20" placeholder="FoxySniper" style="width:100%;background:var(--dark);border:1px solid rgba(255,255,255,0.12);color:var(--white);font-family:'Barlow Condensed',sans-serif;font-size:16px;padding:11px 14px;outline:none;letter-spacing:1px;"></div>
+      <div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);font-weight:600;margin-bottom:6px;">Username</div>
+      <input id="re-user" type="text" maxlength="20" autocomplete="username" placeholder="daniel123" style="width:100%;background:var(--dark);border:1px solid rgba(255,255,255,0.12);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:16px;padding:11px 14px;outline:none;letter-spacing:1px;"></div>
+      <div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);font-weight:600;margin-bottom:6px;">Password</div>
+      <input id="re-pass" type="password" maxlength="30" autocomplete="new-password" placeholder="mínimo 4 caracteres" style="width:100%;background:var(--dark);border:1px solid rgba(255,255,255,0.12);color:var(--white);font-family:'Barlow Condensed',sans-serif;font-size:16px;padding:11px 14px;outline:none;"></div>
+      <div id="re-err" style="font-size:11px;color:var(--red);min-height:18px;margin-bottom:6px;"></div>
+      <button onclick="doRegister()" id="re-btn" style="width:100%;padding:13px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;">→ Criar Conta</button>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:7px;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--gray);"><span style="font-size:14px;">☁️</span>Progresso guardado na cloud</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--gray);"><span style="font-size:14px;">🔒</span>Password encriptada</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-name">
+  <div class="modal-box">
+    <h3>✏️ Editar Nome</h3>
+    <div style="margin-bottom:14px">
+      <label style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);font-weight:600;display:block;margin-bottom:6px">Nome de Exibição</label>
+      <input class="modal-input" id="input-display-name" type="text" maxlength="24" placeholder="Ex: FoxySniper">
+    </div>
+    <div id="modal-name-error" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:8px"></div>
+    <div class="modal-btns">
+      <button class="modal-save" onclick="saveName()">Guardar</button>
+      <button class="modal-cancel" onclick="closeModal('modal-name')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- COIN SHOP MODAL -->
+<div class="modal-overlay" id="modal-shop">
+  <div class="modal-box" style="border-top-color:var(--coin);max-width:380px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h3 style="color:var(--coin);">💰 Loja Radiante</h3>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="rc-icon">R</div>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:var(--coin);" id="shop-balance">0</span>
+      </div>
+    </div>
+    <div class="shop-item" onclick="spendCoins('agents',10000)">
+      <div class="shop-item-icon">🧬</div>
+      <div class="shop-item-info">
+        <div class="shop-item-name">Mudar Agentes Diários</div>
+        <div class="shop-item-desc">Gera 3 novos agentes para hoje</div>
+      </div>
+      <div class="shop-item-cost"><div class="rc-icon">R</div>10000</div>
+    </div>
+    <div class="shop-item" onclick="spendCoins('video',3000)">
+      <div class="shop-item-icon">🎬</div>
+      <div class="shop-item-info">
+        <div class="shop-item-name">Trocar Vídeo Diário</div>
+        <div class="shop-item-desc">Recebe um novo vídeo de hoje</div>
+      </div>
+      <div class="shop-item-cost"><div class="rc-icon">R</div>3000</div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="modal-cancel" onclick="closeModal('modal-shop')" style="width:100%;padding:11px;border:1px solid rgba(255,255,255,0.15)!important;color:var(--gray);background:transparent;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div id="xp-toast">+0 XP</div>
+<div id="coin-toast"><div class="rc-icon">R</div><span id="coin-toast-val">+0</span></div>
+<div id="unlock-toast">
+  <span class="ut-icon" id="ut-icon">🏆</span>
+  <div class="ut-title">Conquista Desbloqueada!</div>
+  <div class="ut-name" id="ut-name">—</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo" onclick="showScreen('screen-home')">
+    <img src="logo.png" style="width:34px;height:34px;object-fit:contain;">
+    <div class="logo-text">
+      <h1>Foxy<span>'</span>Studio</h1>
+      <small>Valo Trainer</small>
+    </div>
+  </div>
+  <div class="hud">
+    <div class="hud-xp"><span>XP</span><span id="hud-xp">0</span></div>
+    <div class="hud-coins" onclick="openShop()" title="Radiante Coins">
+      <div class="hud-coins-icon">R</div>
+      <span class="hud-coins-val" id="hud-coins">0</span>
+    </div>
+    <div class="rank-pill" id="hud-rank">IRON IGL</div>
+    <div class="avatar-btn" onclick="showScreen('screen-profile');setBnav('bn-profile')">
+      <img id="hud-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23243447'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23ff4655' opacity='.6'/%3E%3Cellipse cx='20' cy='35' rx='12' ry='9' fill='%23ff4655' opacity='.4'/%3E%3C/svg%3E" alt="avatar">
+    </div>
+  </div>
+</header>
+
+<!-- DAILY BANNER -->
+<div id="daily-banner">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;gap:8px;">
+    <div class="streak-txt">🎯 Streak: <span id="streak-days">0</span> dias</div>
+    <div class="streak-dots" id="streak-dots"></div>
+  </div>
+  <div class="banner-right" id="banner-status">Completa um quiz hoje!</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav id="bot-nav">
+  <button class="bnav on" id="bn-home" onclick="showScreen('screen-home');setBnav('bn-home')"><span class="bi">🏠</span>Menu</button>
+  <button class="bnav" id="bn-scenarios" onclick="showScreen('screen-scenarios');setBnav('bn-scenarios')"><span class="bi">🎯</span>Táticas</button>
+  <button class="bnav" id="bn-videos" onclick="showScreen('screen-videos');setBnav('bn-videos')"><span class="bi">🎬</span>Vídeos</button>
+  <button class="bnav" id="bn-agents" onclick="showScreen('screen-agents');setBnav('bn-agents')"><span class="bi">🧬</span>Agentes</button>
+  <button class="bnav" id="bn-groups" onclick="showScreen('screen-groups');setBnav('bn-groups')"><span class="bi">💬</span>Grupos</button>
+  <button class="bnav" id="bn-profile" onclick="showScreen('screen-profile');setBnav('bn-profile')"><span class="bi">👤</span>Perfil</button>
+</nav>
+
+<main>
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div class="home-hero">
+    <div class="ey">Foxy'Studio — Valo Trainer</div>
+    <h2>Domina o<br><span>Valorant</span></h2>
+    <p>Treina diariamente, aprende táticas de IGL, domina agentes e conquista o topo.</p>
+  </div>
+  <div class="modules-grid">
+    <div class="mod-card" onclick="showScreen('screen-scenarios');setBnav('bn-scenarios')">
+      <div class="mod-icon">🎯</div><h3>Cenários Táticos</h3>
+      <p>12 cenários diários aleatórios de situações reais.</p>
+      <span class="mod-tag">→ Cenários</span>
+    </div>
+    <div class="mod-card ac" onclick="showScreen('screen-agents');setBnav('bn-agents')">
+      <div class="mod-icon">🧬</div><h3>Treino Agentes</h3>
+      <p>3 agentes por dia. Simulações cada. Rotação diária.</p>
+      <span class="mod-tag">→ Daily</span>
+    </div>
+    <div class="mod-card video-card" onclick="showScreen('screen-videos');setBnav('bn-videos')">
+      <div class="mod-icon">🎬</div><h3>Vídeos de Ajuda</h3>
+      <p>1 vídeo por dia publicado pelos ADMs. Aprende táticas em detalhe.</p>
+      <span class="mod-tag">→ Daily</span>
+    </div>
+    <div class="mod-card" onclick="showScreen('screen-callouts')">
+      <div class="mod-icon">📡</div><h3>Callouts Quiz</h3>
+      <p>Identifica posições nos mapas mais jogados.</p>
+      <span class="mod-tag">→ Mapas</span>
+    </div>
+    <div class="mod-card" onclick="showScreen('screen-glossary')">
+      <div class="mod-icon">📖</div><h3>Glossário IGL</h3>
+      <p>30+ termos táticos essenciais com pesquisa.</p>
+      <span class="mod-tag">→ Termos</span>
+    </div>
+    <div class="mod-card" onclick="showScreen('screen-groups');setBnav('bn-groups')">
+      <div class="mod-icon">💬</div><h3>Grupos</h3>
+      <p>Cria grupos privados ou junta-te a grupos públicos.</p>
+      <span class="mod-tag">→ Chat</span>
+    </div>
+    <div class="mod-card" onclick="showScreen('screen-tips')">
+      <div class="mod-icon">⚡</div><h3>Mentalidade IGL</h3>
+      <p>10 princípios de liderança em jogo.</p>
+      <span class="mod-tag">→ Tips</span>
+    </div>
+    <div class="mod-card" onclick="openShop()" style="border-color:rgba(244,196,48,0.2);">
+      <div class="mod-icon">💰</div><h3>Loja Radiante</h3>
+      <p>Gasta as tuas moedas para mudar agentes ou vídeos diários.</p>
+      <span class="mod-tag" style="color:var(--coin);">→ Loja</span>
+    </div>
+    <div class="mod-card aim-card" onclick="openAimTrainer()" style="border-color:rgba(255,70,85,0.25);grid-column:1/-1;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="mod-icon" style="font-size:28px;margin:0">🔫</div>
+        <div style="flex:1">
+          <h3 style="font-size:14px;letter-spacing:2px;color:var(--white)">Treino de Mira <span style="color:var(--red)">— AIM TRAINER</span></h3>
+          <p style="font-size:11px;color:var(--gray);margin-top:2px">Robôs 3D reais do Valorant · 5 modos</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:2px;color:var(--red);text-transform:uppercase;padding:6px 14px;border:1px solid var(--red);background:rgba(255,70,85,0.08);">→ ABRIR</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENARIOS -->
+<div class="screen" id="screen-scenarios">
+  <button class="back-btn" onclick="showScreen('screen-home');setBnav('bn-home')">← Voltar</button>
+  <div class="sec-hdr"><div class="ey">Módulo 1</div><h2>Cenários Táticos</h2><p>12 aleatórios por sessão · diferente cada dia</p></div>
+  <div id="quiz-container"></div>
+</div>
+
+<!-- AGENTS -->
+<div class="screen" id="screen-agents">
+  <button class="back-btn" onclick="showScreen('screen-home');setBnav('bn-home')">← Voltar</button>
+  <div class="sec-hdr"><div class="ey">Módulo 2 — Daily</div><h2>Treino de Agentes</h2><p>Os teus 3 agentes de hoje — rotação diferente para cada pessoa</p></div>
+  <div id="agents-showcase"></div>
+  <button class="change-agents-btn" id="change-agents-btn" onclick="spendCoins('agents',10000)">
+    <div class="rc-icon">R</div>
+    <span>10000 — Mudar Agentes de Hoje</span>
+  </button>
+</div>
+
+<!-- AGENT QUIZ -->
+<div class="screen" id="screen-agent-quiz">
+  <button class="back-btn" onclick="showScreen('screen-agents')">← Agentes</button>
+  <div id="agent-quiz-container"></div>
+</div>
+
+<!-- VIDEOS -->
+<div class="screen" id="screen-videos">
+  <button class="back-btn" onclick="showScreen('screen-home');setBnav('bn-home')">← Voltar</button>
+  <div class="sec-hdr"><div class="ey">Módulo — Daily</div><h2>Vídeos de Ajuda</h2><p>1 vídeo por dia publicado pelos ADMs · troca por <span style="color:var(--coin)">3000</span> <span class="rc-icon" style="vertical-align:middle;display:inline-flex;">R</span></p></div>
+  <div id="video-container"></div>
+</div>
+
+<!-- CALLOUTS -->
+<div class="screen" id="screen-callouts">
+  <button class="back-btn" onclick="showScreen('screen-home');setBnav('bn-home')">← Voltar</button>
+  <div class="sec-hdr"><div class="ey">Módulo 3</div><h2>Callouts Quiz</h2><p>Identifica as zonas nos mapas</p></div>
+  <div id="callout-content"></div>
+</div>
+
+<!-- GLOSSARY -->
+<div class="screen" id="screen-glossary">
+  <button class="back-btn" onclick="showScreen('screen-home');setBnav('bn-home')">← Voltar</button>
+  <div class="sec-hdr"><div class="ey">Módulo 4</div><h2>Glossário IGL</h2></div>
+  <div class="glo-search"><span class="glo-icon">🔍</span><input type="text" id="glo-input" placeholder="Pesquisar..." oninput="filterGlo()"></div>
+  <div class="glo-grid" id="glo-grid"></div>
+</div>
+
+<!-- TIPS -->
+<div class="screen" id="screen-tips">
+  <button class="back-btn" onclick="showScreen('screen-home');setBnav('bn-home')">← Voltar</button>
+  <div class="sec-hdr"><div class="ey">Módulo 5</div><h2>Mentalidade IGL</h2></div>
+  <div class="tips-list" id="tips-list"></div>
+</div>
+
+<!-- PROFILE -->
+<div class="screen" id="screen-profile">
+  <div class="sec-hdr"><div class="ey">O teu espaço</div><h2>Perfil</h2></div>
+  <div class="profile-hero">
+    <div class="prof-avatar" onclick="document.getElementById('avatar-upload').click()">
+      <img id="prof-avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23243447'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23ff4655' opacity='.6'/%3E%3Cellipse cx='20' cy='35' rx='12' ry='9' fill='%23ff4655' opacity='.4'/%3E%3C/svg%3E" alt="avatar">
+      <div class="prof-avatar-edit">✏️</div>
+    </div>
+    <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+    <div class="prof-info">
+      <div class="prof-name-row">
+        <div class="prof-name" id="prof-name">—</div>
+        <span class="verified" id="prof-verified" style="display:none" title="ADM verificado">✓</span>
+        <button class="prof-edit-btn" onclick="openNameModal()">✏️</button>
+      </div>
+      <div id="prof-username-disp" style="font-size:11px;color:var(--accent);margin-bottom:4px;letter-spacing:1px;">@—</div>
+      <div class="prof-rank" id="prof-rank-disp">IRON IGL</div>
+    </div>
+    <button class="prof-logout" onclick="showScreen('screen-settings')" style="right:54px;">⚙️</button>
+    <button class="prof-logout" onclick="showScreen('screen-adm')" id="adm-btn" style="display:none;right:100px;color:var(--red);border-color:rgba(255,70,85,0.3);">🛡️</button>
+  </div>
+  <div class="prof-stats">
+    <div class="pstat"><div class="n" id="ps-xp">0</div><div class="l">XP Total</div></div>
+    <div class="pstat"><div class="n coin" id="ps-coins">0</div><div class="l">💰 Moedas</div></div>
+    <div class="pstat"><div class="n" id="ps-streak">0</div><div class="l">Streak</div></div>
+    <div class="pstat"><div class="n" id="ps-ach">0</div><div class="l">Conquistas</div></div>
+  </div>
+  <div style="margin-bottom:20px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+      Histórico <span style="flex:1;height:1px;background:rgba(255,255,255,0.07);display:inline-block;"></span>
+    </div>
+    <div id="history-container">
+      <div style="font-size:12px;color:var(--gray);padding:12px 0;">Sem histórico ainda.</div>
+    </div>
+  </div>
+  <div id="achievements-container"></div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="res-screen">
+    <div class="res-grade" id="res-grade">0%</div>
+    <div class="res-rank" id="res-rank">IGL NOVICE</div>
+    <div class="res-desc" id="res-desc"></div>
+    <div class="xp-flash" id="res-xp-flash">+0 XP</div>
+    <div class="coin-flash" id="res-coin-flash"><div class="rc-icon">R</div><span>+0 Radiante Coins</span></div>
+    <div class="res-stats">
+      <div class="rstat"><div class="n" id="res-correct">0</div><div class="l">Corretas</div></div>
+      <div class="rstat"><div class="n" id="res-total">0</div><div class="l">Total</div></div>
+      <div class="rstat"><div class="n" id="res-streak">0🎯</div><div class="l">Streak</div></div>
+    </div>
+    <button class="btn-red" id="res-repeat">Repetir</button>
+    <button class="btn-ghost" onclick="showScreen('screen-home');setBnav('bn-home')">Menu</button>
+  </div>
+</div>
+
+<!-- GROUPS LIST -->
+<div class="screen" id="screen-groups">
+  <div class="sec-hdr"><div class="ey">Social</div><h2>Grupos</h2></div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button onclick="openCreateGroup()" style="flex:1;padding:11px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">+ Criar Grupo</button>
+    <button onclick="openJoinGroup()" style="flex:1;padding:11px;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Entrar com Chave</button>
+  </div>
+  <div id="groups-list"></div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div class="screen" id="screen-chat">
+  <div class="chat-header">
+    <button class="back-btn" style="margin:0" onclick="showScreen('screen-groups');setBnav('bn-groups')">←</button>
+    <h3 id="chat-group-name">Grupo</h3>
+    <button id="chat-settings-btn" onclick="openGroupSettings()" style="background:none;border:none;color:var(--gray);font-size:18px;cursor:pointer;">⚙️</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-bar" id="chat-input-bar">
+    <label class="chat-img-btn" id="chat-img-label" for="chat-img-input" title="Imagem">🖼️</label>
+    <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="sendImage(this)">
+    <textarea class="chat-input" id="chat-input" placeholder="Escreve uma mensagem..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+    <button class="chat-send-btn" onclick="sendMsg()">→</button>
+  </div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div class="screen" id="screen-settings">
+  <button class="back-btn" onclick="showScreen('screen-profile');setBnav('bn-profile')">← Perfil</button>
+  <div class="sec-hdr"><div class="ey">Personalização</div><h2>Configurações</h2></div>
+  <div class="settings-section">
+    <h3>Aparência</h3>
+    <div class="setting-row" onclick="toggleDarkMode()">
+      <span class="setting-label">Modo Escuro</span>
+      <div class="toggle-row"><div class="toggle on" id="toggle-dark"></div></div>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Cor de Destaque</span><div></div>
+    </div>
+    <div class="color-swatches" id="color-swatches">
+      <div class="swatch active" style="background:#ff4655" data-color="#ff4655" onclick="setAccentColor('#ff4655',this)"></div>
+      <div class="swatch" style="background:#00c8ff" data-color="#00c8ff" onclick="setAccentColor('#00c8ff',this)"></div>
+      <div class="swatch" style="background:#e8c97a" data-color="#e8c97a" onclick="setAccentColor('#e8c97a',this)"></div>
+      <div class="swatch" style="background:#4ade80" data-color="#4ade80" onclick="setAccentColor('#4ade80',this)"></div>
+      <div class="swatch" style="background:#a78bfa" data-color="#a78bfa" onclick="setAccentColor('#a78bfa',this)"></div>
+      <div class="swatch" style="background:#f97316" data-color="#f97316" onclick="setAccentColor('#f97316',this)"></div>
+    </div>
+    <div class="setting-row" style="margin-top:8px;">
+      <span class="setting-label">Tamanho do Texto</span>
+      <span class="setting-value" id="font-size-val">Médio</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <button onclick="setFontSize('small')" style="flex:1;padding:8px;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Pequeno</button>
+      <button onclick="setFontSize('medium')" style="flex:1;padding:8px;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Médio</button>
+      <button onclick="setFontSize('large')" style="flex:1;padding:8px;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Grande</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>Idioma</h3>
+    <div style="display:flex;gap:8px;">
+      <button onclick="setLang('pt')" id="lang-pt" style="flex:1;padding:10px;background:rgba(255,70,85,0.15);border:1px solid var(--red);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🇵🇹 Português</button>
+      <button onclick="setLang('en')" id="lang-en" style="flex:1;padding:10px;background:var(--dark2);border:1px solid rgba(255,255,255,0.1);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🇬🇧 English</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>Conta</h3>
+    <div class="setting-row" onclick="openChangePw()"><span class="setting-label">Mudar Password</span><span class="setting-value">→</span></div>
+    <div class="setting-row" onclick="openChangeUsername()"><span class="setting-label">Pedir Mudança de Username</span><span class="setting-value" id="username-req-status">→</span></div>
+  </div>
+  <div class="settings-section">
+    <h3>Quiz</h3>
+    <div class="setting-row" onclick="toggleAbilityNames()">
+      <div><span class="setting-label">Mostrar Nomes das Abilities</span></div>
+      <div class="toggle-row"><div class="toggle on" id="toggle-ability-names"></div></div>
+    </div>
+  </div>
+  <button onclick="signOut()" style="width:100%;padding:13px;background:transparent;border:1px solid rgba(255,70,85,0.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;margin-top:8px;">⏏ Terminar Sessão</button>
+</div>
+
+<!-- ADM PANEL -->
+<div class="screen" id="screen-adm">
+  <button class="back-btn" onclick="showScreen('screen-profile');setBnav('bn-profile')">← Perfil</button>
+  <div class="sec-hdr"><div class="ey" style="color:var(--red)">⚠️ Acesso Restrito</div><h2>Painel ADM</h2></div>
+  <div class="adm-card" style="text-align:center;padding:28px 20px;">
+    <div style="font-size:40px;margin-bottom:12px;">🛡️</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;letter-spacing:2px;margin-bottom:6px;">ADM MANAGER</div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:20px;">Abre o painel completo de administração.</div>
+    <a href="adm-manager.html" target="_blank" style="display:inline-block;padding:13px 28px;background:var(--red);color:white;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:3px;text-transform:uppercase;text-decoration:none;">→ Abrir Manager</a>
+  </div>
+  <div class="adm-card">
+    <h4>⚡ Forçar Agentes</h4>
+    <div class="adm-input-row">
+      <input class="adm-input" id="adm-agent-user" placeholder="Username..." type="text">
+      <input class="adm-input" id="adm-agent-vals" placeholder="Omen, Jett, Sage" type="text">
+    </div>
+    <button class="adm-btn green" onclick="admSetAgents()" style="width:100%;padding:10px;">✅ Definir Agentes</button>
+    <div id="adm-agent-result" style="font-size:11px;color:var(--green);margin-top:8px;"></div>
+  </div>
+  <div class="adm-card">
+    <h4>📋 Pedidos de Username</h4>
+    <div id="adm-name-requests"><div style="color:var(--gray);font-size:12px;">Sem pedidos pendentes.</div></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ============================================================
+// JSONBIN.IO — CLOUD STORAGE
+// ============================================================
+const JBIN_KEY  = '$2a$10$XukuamUMRwoCs9MgtAKageEiXx9pMZ5teO/HmD735XaJvoLKwwNA6';
+const JBIN_BASE = 'https://api.jsonbin.io/v3';
+const LS_SESSION = 'vt_session';
+const FIXED_INDEX_BIN_ID = '69b400e4c3097a1dd520a506';
+const INDEX_BIN_LS = 'vt_index_binId';
+
+let _session = null;
+let userProfile = null;
+
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('vt_salt_' + pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function jbinCreate(data) {
+  const r = await fetch(`${JBIN_BASE}/b`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Master-Key':JBIN_KEY,'X-Bin-Private':'false'},
+    body:JSON.stringify(data)
+  });
+  const j = await r.json();
+  return j.metadata?.id || null;
+}
+
+async function jbinRead(binId) {
+  const r = await fetch(`${JBIN_BASE}/b/${binId}/latest`, {headers:{'X-Master-Key':JBIN_KEY}});
+  const j = await r.json();
+  return j.record || null;
+}
+
+async function jbinUpdate(binId, data) {
+  await fetch(`${JBIN_BASE}/b/${binId}`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':JBIN_KEY},
+    body:JSON.stringify(data)
+  });
+}
+
+async function getIndexBinId() {
+  localStorage.setItem(INDEX_BIN_LS, FIXED_INDEX_BIN_ID);
+  return FIXED_INDEX_BIN_ID;
+}
+
+async function indexLookup(username) {
+  const id = await getIndexBinId();
+  if (!id) return null;
+  const rec = await jbinRead(id);
+  return rec?.users?.[username.toLowerCase()] || null;
+}
+
+async function indexRegister(username, binId, pwHash) {
+  const id = await getIndexBinId();
+  if (!id) return false;
+  const rec = await jbinRead(id);
+  const users = rec?.users || {};
+  if (users[username.toLowerCase()]) return false;
+  users[username.toLowerCase()] = { binId, pwHash };
+  await jbinUpdate(id, { __vt_index: true, users });
+  return true;
+}
+
+window.authTab = (tab) => {
+  const isLogin = tab === 'login';
+  document.getElementById('pane-login').style.display = isLogin ? '' : 'none';
+  document.getElementById('pane-reg').style.display  = isLogin ? 'none' : '';
+  document.getElementById('tab-login').style.color = isLogin ? 'var(--red)' : 'var(--gray)';
+  document.getElementById('tab-login').style.borderBottomColor = isLogin ? 'var(--red)' : 'transparent';
+  document.getElementById('tab-reg').style.color = isLogin ? 'var(--gray)' : 'var(--red)';
+  document.getElementById('tab-reg').style.borderBottomColor = isLogin ? 'transparent' : 'var(--red)';
+};
+
+window.doRegister = async () => {
+  const display = document.getElementById('re-display').value.trim();
+  const user    = document.getElementById('re-user').value.trim().toLowerCase();
+  const pass    = document.getElementById('re-pass').value;
+  const errEl   = document.getElementById('re-err');
+  errEl.textContent = '';
+  if (!display)            return errEl.textContent = 'Escreve o teu nome.';
+  if (!user || user.length < 3) return errEl.textContent = 'Username: mínimo 3 caracteres.';
+  if (!/^[a-z0-9_]+$/.test(user)) return errEl.textContent = 'Username: só letras, números e _.';
+  if (pass.length < 4)     return errEl.textContent = 'Password: mínimo 4 caracteres.';
+  const btn = document.getElementById('re-btn');
+  btn.disabled = true; btn.textContent = '⏳ A criar...';
+  try {
+    const pwHash = await hashPw(pass);
+    const existing = await indexLookup(user);
+    if (existing) { errEl.textContent = 'Username já existe.'; btn.disabled=false; btn.textContent='→ Criar Conta'; return; }
+    const systemBinId = await getIndexBinId();
+    const profile = newProfile(display, user);
+    profile.systemBinId = systemBinId;
+    const binId = await jbinCreate({ profile });
+    if (!binId) throw new Error('Falha ao criar bin.');
+    const ok = await indexRegister(user, binId, pwHash);
+    if (!ok) { errEl.textContent = 'Username já existe.'; btn.disabled=false; btn.textContent='→ Criar Conta'; return; }
+    const indexBinId = await getIndexBinId();
+    _session = { username: user, binId, pwHash, indexBinId };
+    localStorage.setItem(LS_SESSION, JSON.stringify(_session));
+    userProfile = profile;
+    document.getElementById('setup-screen').classList.remove('show');
+    bootApp();
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+    btn.disabled = false; btn.textContent = '→ Criar Conta';
+  }
+};
+
+window.doLogin = async () => {
+  const user = document.getElementById('li-user').value.trim().toLowerCase();
+  const pass = document.getElementById('li-pass').value;
+  const errEl = document.getElementById('li-err');
+  errEl.textContent = '';
+  if (!user || !pass) return errEl.textContent = 'Preenche todos os campos.';
+  const btn = document.getElementById('li-btn');
+  btn.disabled = true; btn.textContent = '⏳ A entrar...';
+  try {
+    const entry = await indexLookup(user);
+    if (!entry) { errEl.textContent = 'Username não encontrado.'; btn.disabled=false; btn.textContent='→ Entrar'; return; }
+    const pwHash = await hashPw(pass);
+    if (pwHash !== entry.pwHash) { errEl.textContent = 'Password incorreta.'; btn.disabled=false; btn.textContent='→ Entrar'; return; }
+    const rec = await jbinRead(entry.binId);
+    userProfile = rec?.profile || newProfile(user, user);
+    _session = { username: user, binId: entry.binId, pwHash, indexBinId: await getIndexBinId() };
+    localStorage.setItem(LS_SESSION, JSON.stringify(_session));
+    document.getElementById('setup-screen').classList.remove('show');
+    bootApp();
+  } catch(e) {
+    errEl.textContent = 'Erro de ligação. Tenta novamente.';
+    btn.disabled = false; btn.textContent = '→ Entrar';
+  }
+};
+
+function saveProfile(updates) {
+  userProfile = { ...userProfile, ...updates };
+  localStorage.setItem('vt_profile_cache', JSON.stringify(userProfile));
+  if (_session?.binId) {
+    jbinUpdate(_session.binId, { profile: userProfile }).catch(()=>{});
+  }
+}
+
+window.signOut = () => {
+  if (!confirm('Terminar sessão?')) return;
+  localStorage.removeItem(LS_SESSION);
+  localStorage.removeItem('vt_profile_cache');
+  userProfile = null; _session = null;
+  document.getElementById('setup-screen').classList.add('show');
+  authTab('login');
+};
+
+function newProfile(displayName, username) {
+  return {
+    displayName, username, photoURL: '',
+    xp: 0, coins: 0,
+    streak: 0, lastActiveDate: '',
+    achievements: [], scenariosTotal: 0,
+    calloutQuizzesTotal: 0,
+    agentsCompleted: [], agentsDoneToday: {},
+    agentsRerollCount: {},
+    videoSwappedToday: {},
+    history: [],
+    createdAt: Date.now(),
+  };
+}
+
+let _cloudLoaded = false;
+
+async function bootApp() {
+  if (userProfile?.banned) { alert('A tua conta foi suspensa.'); signOut(); return; }
+  totalXP = userProfile.xp || 0;
+  totalCoins = userProfile.coins || 0;
+  currentStreak = userProfile.streak || 0;
+  unlockedAch = new Set(userProfile.achievements || []);
+  loadSettings();
+  updateHUD();
+  updateAvatars();
+  renderStreakBanner();
+  checkAdmUI();
+  _cloudLoaded = false;
+  await loadCloudQuizzes();
+  _cloudLoaded = true;
+  // Re-render quiz screen if user is already on it
+  const active = document.querySelector('.screen.active')?.id;
+  if (active === 'screen-scenarios') initScenarios();
+  if (active === 'screen-agents')    initAgentsScreen();
+  if (active === 'screen-callouts')  initCallouts();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const sess = localStorage.getItem(LS_SESSION);
+  if (sess) {
+    try {
+      _session = JSON.parse(sess);
+      if (_session.indexBinId) localStorage.setItem(INDEX_BIN_LS, _session.indexBinId);
+      const cached = localStorage.getItem('vt_profile_cache');
+      if (cached) {
+        userProfile = JSON.parse(cached);
+        bootApp();
+        jbinRead(_session.binId).then(rec => {
+          if (rec?.profile) { userProfile = rec.profile; saveProfile({}); bootApp(); }
+        }).catch(()=>{});
+      } else {
+        document.getElementById('setup-screen').classList.add('show');
+        document.getElementById('li-user').value = _session.username;
+        document.getElementById('li-err').textContent = '🔄 A carregar perfil...';
+        jbinRead(_session.binId).then(rec => {
+          if (rec?.profile) {
+            userProfile = rec.profile;
+            document.getElementById('setup-screen').classList.remove('show');
+            document.getElementById('li-err').textContent = '';
+            bootApp();
+          }
+        }).catch(()=>{ document.getElementById('li-err').textContent = 'Sem ligação.'; });
+      }
+    } catch(e) { document.getElementById('setup-screen').classList.add('show'); }
+  } else {
+    document.getElementById('setup-screen').classList.add('show');
+  }
+});
+
+// ============================================================
+// RADIANTE COINS
+// ============================================================
+let totalCoins = 0;
+
+function addCoins(amount, reason) {
+  totalCoins += amount;
+  saveProfile({ coins: totalCoins });
+  updateHUD();
+  showCoinToast(amount);
+  addHistory('coin', reason || 'Atividade', amount, 0);
+}
+
+function showCoinToast(amount) {
+  const t = document.getElementById('coin-toast');
+  document.getElementById('coin-toast-val').textContent = '+' + amount;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+window.openShop = () => {
+  document.getElementById('shop-balance').textContent = totalCoins;
+  document.getElementById('modal-shop').classList.add('show');
+};
+
+window.spendCoins = (item, cost) => {
+  if (totalCoins < cost) {
+    alert(`Precisas de ${cost} Radiante Coins. Tens ${totalCoins}.`);
+    return;
+  }
+  if (item === 'agents') {
+    if (!confirm(`Gastar ${cost} Radiante Coins para mudar os agentes de hoje?`)) return;
+    totalCoins -= cost;
+    // FIX: usar contador para gerar seed diferente em cada reroll
+    const _today = getTodayKey();
+    const _currentCount = userProfile?.agentsRerollCount?.[_today] || 0;
+    const _rerollCounts = { ...(userProfile?.agentsRerollCount || {}) };
+    _rerollCounts[_today] = _currentCount + 1;
+    saveProfile({ coins: totalCoins, forcedAgents: null, agentsRerollCount: _rerollCounts });
+    updateHUD();
+    closeModal('modal-shop');
+    addHistory('shop', 'Agentes diários trocados', 0, cost);
+    showScreen('screen-agents');
+    initAgentsScreen();
+    alert('✅ Agentes trocados!');
+  } else if (item === 'video') {
+    if (!confirm(`Gastar ${cost} Radiante Coins para trocar o vídeo de hoje?`)) return;
+    totalCoins -= cost;
+    const swapped = userProfile.videoSwappedToday || {};
+    swapped[getTodayKey()] = (swapped[getTodayKey()] || 0) + 1;
+    saveProfile({ coins: totalCoins, videoSwappedToday: swapped });
+    updateHUD();
+    closeModal('modal-shop');
+    addHistory('shop', 'Vídeo diário trocado', 0, cost);
+    showScreen('screen-videos');
+    renderVideoScreen();
+  }
+};
+
+// ============================================================
+// HISTORY
+// ============================================================
+function addHistory(type, title, coinsEarned, coinsSpent) {
+  const hist = userProfile.history || [];
+  hist.unshift({
+    type, title,
+    coinsEarned, coinsSpent,
+    date: new Date().toLocaleDateString('pt-PT'),
+    ts: Date.now()
+  });
+  if (hist.length > 50) hist.splice(50);
+  saveProfile({ history: hist });
+}
+
+function renderHistory() {
+  const hist = userProfile?.history || [];
+  const el = document.getElementById('history-container');
+  if (!hist.length) { el.innerHTML='<div style="font-size:12px;color:var(--gray);padding:12px 0;">Sem histórico ainda.</div>'; return; }
+  const icons = { coin:'💰', quiz:'🎯', agent:'🧬', video:'🎬', shop:'🛍️', callout:'📡' };
+  el.innerHTML = hist.slice(0,20).map(h => `
+    <div class="hist-item">
+      <div class="hist-icon">${icons[h.type]||'📋'}</div>
+      <div class="hist-info">
+        <div class="hist-title">${h.title}</div>
+        <div class="hist-date">${h.date}</div>
+      </div>
+      ${h.coinsEarned ? `<div class="hist-reward"><div class="rc-icon">R</div>+${h.coinsEarned}</div>` : ''}
+      ${h.coinsSpent ? `<div class="hist-reward" style="color:var(--red)"><div class="rc-icon" style="background:var(--red);border-color:#c0392b;">R</div>-${h.coinsSpent}</div>` : ''}
+    </div>`).join('');
+}
+
+// ============================================================
+// ACHIEVEMENTS
+// ============================================================
+const ACHIEVEMENTS_BUILTIN = [
+  {id:'agent_all',     icon:'🧬', name:'Agent Master',        desc:'Completa simulações de todos os agentes',     cat:'Agentes'},
+  {id:'igl_first',     icon:'🎯', name:'Primeira Call',      desc:'Completa o teu primeiro cenário tático',      cat:'IGL Skill'},
+  {id:'igl_perfect',   icon:'💯', name:'Decisão Perfeita',   desc:'Obtém 100% num quiz de cenários',             cat:'IGL Skill'},
+  {id:'igl_veteran',   icon:'🏅', name:'Veterano',           desc:'Completa 50 cenários táticos no total',       cat:'IGL Skill'},
+  {id:'igl_legend',    icon:'👑', name:'Lenda',              desc:'Completa 200 cenários táticos no total',      cat:'IGL Skill'},
+  {id:'igl_gold',      icon:'🥇', name:'IGL Gold',           desc:'Atinge o rank Gold IGL',                      cat:'IGL Skill'},
+  {id:'igl_radiant',   icon:'✨', name:'IGL Radiant',        desc:'Atinge o rank Radiant IGL',                   cat:'IGL Skill'},
+  {id:'streak_3',      icon:'🔥', name:'Em Chamas',          desc:'Mantém streak de 3 dias',                     cat:'Dedicação'},
+  {id:'streak_7',      icon:'⚡', name:'Semana Completa',    desc:'Mantém streak de 7 dias',                     cat:'Dedicação'},
+  {id:'streak_30',     icon:'🌟', name:'Mês de Elite',       desc:'Mantém streak de 30 dias',                    cat:'Dedicação'},
+  {id:'xp_500',        icon:'🎖️', name:'Primeiro Marco',    desc:'Acumula 500 XP',                              cat:'XP'},
+  {id:'xp_2000',       icon:'🏆', name:'Dedicado',           desc:'Acumula 2000 XP',                             cat:'XP'},
+  {id:'xp_5000',       icon:'💎', name:'Elite',              desc:'Acumula 5000 XP',                             cat:'XP'},
+  {id:'coins_1000',    icon:'💰', name:'Rico em Radiante',   desc:'Acumula 1000 Radiante Coins',                 cat:'Moedas'},
+  {id:'coins_5000',    icon:'🤑', name:'Milionário Radiante',desc:'Acumula 5000 Radiante Coins',                 cat:'Moedas'},
+  {id:'video_first',   icon:'🎬', name:'Primeiro Vídeo',     desc:'Vê o teu primeiro vídeo diário',              cat:'Vídeos'},
+  {id:'video_7',       icon:'📺', name:'Semana de Vídeos',   desc:'Vê 7 vídeos diários',                         cat:'Vídeos'},
+  {id:'callout_pro',   icon:'📡', name:'Callout Pro',         desc:'Acerta 100% num quiz de callouts',            cat:'Mapas'},
+  {id:'callout_master',icon:'🗺️', name:'Master dos Mapas',   desc:'Completa 10 quizzes de callouts',             cat:'Mapas'},
+];
+
+let CLOUD_ACHIEVEMENTS = [];
+let ACHIEVEMENTS = [...ACHIEVEMENTS_BUILTIN];
+
+// ============================================================
+// RANKS
+// ============================================================
+const RANKS = [
+  {min:0,    name:'IRON IGL'},
+  {min:100,  name:'BRONZE IGL'},
+  {min:300,  name:'SILVER IGL'},
+  {min:600,  name:'GOLD IGL'},
+  {min:1000, name:'PLATINUM IGL'},
+  {min:1500, name:'DIAMOND IGL'},
+  {min:2500, name:'IMMORTAL IGL'},
+  {min:4000, name:'RADIANT IGL'},
+  {min:6000, name:'ASCENDANT IGL'},
+  {min:8000, name:'SOVEREIGN IGL'},
+  {min:12000,name:'PHANTOM IGL'},
+  {min:18000,name:'VALORANT IGL'},
+  {min:25000,name:'TRANSCENDENT IGL'},
+];
+
+let CLOUD_RANKS = [];
+
+function getAllRanks() {
+  return [...RANKS, ...CLOUD_RANKS].sort((a,b)=>a.min-b.min);
+}
+
+function getRank(xp) {
+  let r = RANKS[0];
+  for(const rk of getAllRanks()) if(xp>=rk.min) r=rk;
+  return r.name;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let totalXP = 0;
+let currentStreak = 0;
+let unlockedAch = new Set();
+
+// ============================================================
+// HUD
+// ============================================================
+function updateHUD() {
+  document.getElementById('hud-xp').textContent = totalXP;
+  document.getElementById('hud-coins').textContent = totalCoins;
+  document.getElementById('hud-rank').textContent = getRank(totalXP);
+  if(document.getElementById('prof-name'))
+    document.getElementById('prof-name').textContent = userProfile?.displayName || '—';
+  if(document.getElementById('prof-username-disp'))
+    document.getElementById('prof-username-disp').textContent = '@' + (userProfile?.username || _session?.username || '—');
+  if(document.getElementById('prof-rank-disp'))
+    document.getElementById('prof-rank-disp').textContent = getRank(totalXP);
+  if(document.getElementById('ps-xp')) document.getElementById('ps-xp').textContent = totalXP;
+  if(document.getElementById('ps-coins')) document.getElementById('ps-coins').textContent = totalCoins;
+  if(document.getElementById('ps-streak')) document.getElementById('ps-streak').textContent = currentStreak;
+  if(document.getElementById('ps-ach')) document.getElementById('ps-ach').textContent = unlockedAch.size;
+  if(document.getElementById('streak-days')) document.getElementById('streak-days').textContent = currentStreak;
+}
+
+function updateAvatars() {
+  const url = userProfile?.photoURL || '';
+  if(url) {
+    document.getElementById('hud-avatar').src = url;
+    document.getElementById('prof-avatar-img').src = url;
+  }
+}
+
+// ============================================================
+// STREAK
+// ============================================================
+function getTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function markDailyDone() {
+  if (!userProfile) return;
+  const today = getTodayKey();
+  if (userProfile.lastActiveDate === today) return;
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+  const newStreak = (userProfile.lastActiveDate === yKey) ? currentStreak + 1 : 1;
+  currentStreak = newStreak;
+  saveProfile({ lastActiveDate: today, streak: newStreak });
+  renderStreakBanner();
+  checkStreakAchievements(newStreak);
+  showXPToast(0, true);
+}
+
+function renderStreakBanner() {
+  const dots = document.getElementById('streak-dots');
+  let html = '';
+  for(let i=0;i<7;i++){
+    const cls = i < Math.min(currentStreak%7||7, 7) ? (i===Math.min(currentStreak,6) ? 'sdot today' : 'sdot done') : 'sdot';
+    html += `<div class="${cls}">🎯</div>`;
+  }
+  dots.innerHTML = html;
+  const today = getTodayKey();
+  document.getElementById('banner-status').textContent =
+    userProfile?.lastActiveDate === today ? '✅ Feito hoje!' : 'Faz um quiz hoje!';
+}
+
+// ============================================================
+// XP
+// ============================================================
+async function addXP(amount) {
+  totalXP += amount;
+  saveProfile({ xp: totalXP });
+  updateHUD();
+  showXPToast(amount);
+  checkXPAchievements(totalXP);
+  checkRankAchievements(totalXP);
+}
+
+function showXPToast(amount, streakOnly=false) {
+  const t = document.getElementById('xp-toast');
+  t.textContent = streakOnly ? '🎯 Streak!' : `+${amount} XP`;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+// ============================================================
+// ACHIEVEMENTS
+// ============================================================
+async function unlockAchievement(id) {
+  if (unlockedAch.has(id)) return;
+  unlockedAch.add(id);
+  saveProfile({ achievements: [...unlockedAch] });
+  updateHUD();
+  const ach = ACHIEVEMENTS.find(a=>a.id===id);
+  if (ach) showUnlockToast(ach);
+  if (document.getElementById('screen-profile').classList.contains('active'))
+    renderAchievements();
+}
+
+function showUnlockToast(ach) {
+  document.getElementById('ut-icon').textContent = ach.icon;
+  document.getElementById('ut-name').textContent = ach.name;
+  const t = document.getElementById('unlock-toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3500);
+}
+
+function checkXPAchievements(xp) {
+  if(xp>=500) unlockAchievement('xp_500');
+  if(xp>=2000) unlockAchievement('xp_2000');
+  if(xp>=5000) unlockAchievement('xp_5000');
+}
+
+function checkCoinAchievements(coins) {
+  if(coins>=1000) unlockAchievement('coins_1000');
+  if(coins>=5000) unlockAchievement('coins_5000');
+}
+
+function checkRankAchievements(xp) {
+  if(xp>=600) unlockAchievement('igl_gold');
+  if(xp>=4000) unlockAchievement('igl_radiant');
+}
+
+function checkStreakAchievements(streak) {
+  if(streak>=3) unlockAchievement('streak_3');
+  if(streak>=7) unlockAchievement('streak_7');
+  if(streak>=30) unlockAchievement('streak_30');
+}
+
+async function checkScenarioAchievements(correct, total, allTimeTotal) {
+  if(allTimeTotal>=1) unlockAchievement('igl_first');
+  if(correct===total && total>=12) unlockAchievement('igl_perfect');
+  if(allTimeTotal>=50) unlockAchievement('igl_veteran');
+  if(allTimeTotal>=200) unlockAchievement('igl_legend');
+}
+
+async function checkAgentAchievement(agentName) {
+  const allDone = AGENT_NAMES_ALL.every(name => unlockedAch.has('agent_' + name.toLowerCase().replace('/','').replace(' ','')));
+  if(allDone) await unlockAchievement('agent_all');
+}
+
+function checkVideoAchievements() {
+  const watched = userProfile?.videosWatched || 0;
+  if(watched>=1) unlockAchievement('video_first');
+  if(watched>=7) unlockAchievement('video_7');
+}
+
+function renderAchievements() {
+  ACHIEVEMENTS = [...ACHIEVEMENTS_BUILTIN, ...CLOUD_ACHIEVEMENTS.filter(c=>!ACHIEVEMENTS_BUILTIN.some(b=>b.id===c.id))];
+  const cats = [...new Set(ACHIEVEMENTS.map(a=>a.cat))];
+  let html = '';
+  for(const cat of cats) {
+    const achs = ACHIEVEMENTS.filter(a=>a.cat===cat);
+    const unlockedCount = achs.filter(a=>unlockedAch.has(a.id)).length;
+    html += `<div class="ach-section">
+      <div class="ach-section-title">${cat} (${unlockedCount}/${achs.length})</div>
+      <div class="ach-grid">`;
+    for(const a of achs) {
+      const locked = !unlockedAch.has(a.id);
+      html += `<div class="ach-card ${locked?'':'unlocked'}" title="${a.desc}">
+        <span class="ach-icon">${a.icon}</span>
+        <div class="ach-name">${a.name}</div>
+        ${locked ? '<div class="ach-lock">🔒</div>' : ''}
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  document.getElementById('achievements-container').innerHTML = html;
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+window.openNameModal = () => {
+  document.getElementById('input-display-name').value = userProfile?.displayName || '';
+  document.getElementById('modal-name-error').textContent = '';
+  document.getElementById('modal-name').classList.add('show');
+};
+
+window.saveName = () => {
+  const displayName = document.getElementById('input-display-name').value.trim();
+  if (!displayName) return;
+  saveProfile({ displayName });
+  document.getElementById('prof-name').textContent = displayName;
+  closeModal('modal-name');
+};
+
+window.closeModal = (id) => document.getElementById(id).classList.remove('show');
+
+window.uploadAvatar = async (input) => {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    saveProfile({ photoURL: dataUrl });
+    document.getElementById('prof-avatar-img').src = dataUrl;
+    document.getElementById('hud-avatar').src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+};
+
+// ============================================================
+// ADMIN
+// ============================================================
+const ADM_USER = 'teste';
+function isAdm() { return _session?.username === ADM_USER || userProfile?.isAdm === true; }
+
+function checkAdmUI() {
+  const admBtn = document.getElementById('adm-btn');
+  const verified = document.getElementById('prof-verified');
+  if (isAdm()) {
+    if (admBtn) admBtn.style.display = '';
+    if (verified) verified.style.display = '';
+  } else {
+    if (admBtn) admBtn.style.display = 'none';
+    if (verified) verified.style.display = 'none';
+  }
+}
+
+async function loadCloudQuizzes() {
+  try {
+    const idxRec = await jbinRead(FIXED_INDEX_BIN_ID);
+    const quizBinId = idxRec?.quizBinId;
+    if (!quizBinId) return;
+    const rec = await jbinRead(quizBinId);
+
+    // Reset arrays before filling (avoid duplicates on re-load)
+    ALL_SCENARIOS.length = 0;
+    CALLOUT_QUESTIONS.length = 0;
+    Object.values(AGENTS).forEach(ag => ag.questions.length = 0);
+
+    // Agent questions from cloud
+    const cloudAgentQs = rec?.agentQuestions || {};
+    for (const [agent, qs] of Object.entries(cloudAgentQs)) {
+      if (AGENTS[agent]) {
+        qs.forEach(q => AGENTS[agent].questions.push({...q,_cloud:true}));
+      }
+    }
+
+    // Scenarios from cloud
+    const cloudScenarios = rec?.scenarioQuestions || [];
+    cloudScenarios.forEach(s => ALL_SCENARIOS.push({...s,_cloud:true}));
+
+    // Callouts from cloud
+    const cloudCallouts = rec?.calloutQuestions || [];
+    cloudCallouts.forEach(c => CALLOUT_QUESTIONS.push({...c,_cloud:true}));
+
+    // Cloud agents (custom agents created in manager)
+    const customAgents = rec?.customAgents || [];
+    customAgents.forEach(ag => {
+      if (!AGENTS[ag.name]) {
+        AGENTS[ag.name] = { emoji: ag.emoji || '🎮', role: ag.role || 'Duelist', color: ag.color || 'duelist', questions: [] };
+        if (!AGENT_NAMES_ALL.includes(ag.name)) AGENT_NAMES_ALL.push(ag.name);
+      }
+      // Load cloud questions for this custom agent too
+      const cqs = cloudAgentQs[ag.name] || [];
+      cqs.forEach(q => AGENTS[ag.name].questions.push({...q,_cloud:true}));
+    });
+
+    // Cloud achievements and ranks
+    CLOUD_ACHIEVEMENTS = rec?.achievements || [];
+    CLOUD_RANKS = rec?.ranks || [];
+  } catch(e) {
+    console.error('loadCloudQuizzes error:', e);
+    // Show visible error if running from file:// or network blocked
+    const isFileProtocol = location.protocol === 'file:';
+    const errMsg = isFileProtocol
+      ? '⚠️ Abre este ficheiro no servidor (não localmente). Uploads locais bloqueiam ligações externas.'
+      : '⚠️ Erro ao ligar ao servidor de conteúdo. Verifica a tua ligação e recarrega.';
+    const banner = document.getElementById('daily-banner');
+    if (banner) banner.innerHTML = `<div style="width:100%;text-align:center;font-size:12px;color:var(--red);font-weight:600;padding:4px 0;">${errMsg}</div>`;
+  }
+}
+
+window.admSetAgents = async () => {
+  const user = document.getElementById('adm-agent-user').value.trim().toLowerCase();
+  const agentsRaw = document.getElementById('adm-agent-vals').value.trim();
+  const res = document.getElementById('adm-agent-result');
+  if (!user || !agentsRaw) return;
+  const agents = agentsRaw.split(',').map(a=>a.trim()).filter(Boolean);
+  if (agents.length !== 3) { res.style.color='var(--red)'; res.textContent='3 agentes separados por vírgula.'; return; }
+  res.textContent = '⏳ A definir...';
+  try {
+    const entry = await indexLookup(user);
+    if (!entry) { res.textContent = '❌ Username não encontrado.'; return; }
+    const rec = await jbinRead(entry.binId);
+    if (rec?.profile) {
+      const today = new Date().toISOString().split('T')[0];
+      await jbinUpdate(entry.binId, { profile: { ...rec.profile, forcedAgents: { date: today, agents } } });
+      res.style.color = 'var(--green)'; res.textContent = `✅ Agentes de @${user}: ${agents.join(', ')}`;
+    }
+  } catch(e) { res.style.color='var(--red)'; res.textContent = 'Erro: ' + e.message; }
+};
+
+async function loadAdmRequests() {
+  const el = document.getElementById('adm-name-requests');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--gray);font-size:12px;">⏳ A carregar...</div>';
+  try {
+    const indexId = await getIndexBinId();
+    const rec = await jbinRead(indexId);
+    const users = rec?.users || {};
+    const allReqs = [];
+    for (const [uname, entry] of Object.entries(users)) {
+      try {
+        const userRec = await jbinRead(entry.binId);
+        const req = userRec?.profile?.nameRequest;
+        if (req && req.status === 'pending') allReqs.push({ username: uname, binId: entry.binId, ...req });
+      } catch(e) {}
+    }
+    if (!allReqs.length) { el.innerHTML = '<div style="color:var(--gray);font-size:12px;">Sem pedidos pendentes.</div>'; return; }
+    el.innerHTML = allReqs.map((r, i) => `
+      <div class="adm-notif">
+        <div class="adm-notif-info"><strong>@${r.username}</strong> → <strong>@${r.newUsername}</strong></div>
+        <div class="adm-notif-btns">
+          <button class="adm-btn green" onclick="admApproveNameReq('${r.username}','${r.binId}',1)">✓ 1x</button>
+          <button class="adm-btn red" onclick="admDenyNameReq('${r.username}','${r.binId}')">✗</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+window.admApproveNameReq = async (username, binId, times) => {
+  const rec = await jbinRead(binId);
+  if (rec?.profile) await jbinUpdate(binId, {profile:{...rec.profile,canChangeUsername:times,nameRequest:{...rec.profile.nameRequest,status:'approved'}}});
+  loadAdmRequests();
+};
+
+window.admDenyNameReq = async (username, binId) => {
+  const rec = await jbinRead(binId);
+  if (rec?.profile) await jbinUpdate(binId, {profile:{...rec.profile,nameRequest:{...rec.profile.nameRequest,status:'denied'}}});
+  loadAdmRequests();
+};
+
+// ============================================================
+// SETTINGS
+// ============================================================
+let appSettings = { dark:true, accent:'#ff4655', fontSize:'medium', lang:'pt', notifChat:true, abilityNames:true };
+
+function loadSettings() {
+  const s = localStorage.getItem('vt_settings');
+  if (s) { try { appSettings = {...appSettings, ...JSON.parse(s)}; } catch(e){} }
+  applySettings();
+}
+
+function saveSettings() { localStorage.setItem('vt_settings', JSON.stringify(appSettings)); }
+
+function applySettings() {
+  document.body.style.background = appSettings.dark ? '' : '#f0f2f5';
+  document.body.style.color = appSettings.dark ? '' : '#0f1923';
+  document.documentElement.style.setProperty('--red', appSettings.accent);
+  const sizes = { small:'13px', medium:'14px', large:'16px' };
+  document.body.style.fontSize = sizes[appSettings.fontSize] || '14px';
+  const td = document.getElementById('toggle-dark');
+  if (td) td.classList.toggle('on', appSettings.dark);
+  const tan = document.getElementById('toggle-ability-names');
+  if (tan) tan.classList.toggle('on', appSettings.abilityNames);
+  const fv = document.getElementById('font-size-val');
+  const fvMap = {small:'Pequeno',medium:'Médio',large:'Grande'};
+  if (fv) fv.textContent = fvMap[appSettings.fontSize]||'Médio';
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === appSettings.accent));
+}
+
+window.toggleDarkMode = () => { appSettings.dark = !appSettings.dark; saveSettings(); applySettings(); };
+window.setAccentColor = (color, el) => { appSettings.accent = color; saveSettings(); applySettings(); };
+window.setFontSize = (size) => { appSettings.fontSize = size; saveSettings(); applySettings(); };
+window.setLang = (lang) => {
+  appSettings.lang = lang; saveSettings();
+  document.getElementById('lang-pt').style.color = lang==='pt' ? 'var(--red)' : 'var(--gray)';
+  document.getElementById('lang-en').style.color = lang==='en' ? 'var(--red)' : 'var(--gray)';
+};
+window.toggleAbilityNames = () => { appSettings.abilityNames = !appSettings.abilityNames; saveSettings(); const tog=document.getElementById('toggle-ability-names'); if(tog)tog.classList.toggle('on',appSettings.abilityNames); };
+
+window.openChangePw = () => {
+  const newPw = prompt('Nova password (mínimo 4 caracteres):');
+  if (!newPw || newPw.length < 4) { alert('Password inválida.'); return; }
+  hashPw(newPw).then(async hash => {
+    const indexId = localStorage.getItem(INDEX_BIN_LS);
+    const rec = await jbinRead(indexId);
+    const users = rec?.users || {};
+    const u = _session.username;
+    if (users[u]) { users[u].pwHash = hash; await jbinUpdate(indexId, { ...rec, users }); _session.pwHash = hash; localStorage.setItem(LS_SESSION, JSON.stringify(_session)); alert('✅ Password alterada!'); }
+  });
+};
+
+window.openChangeUsername = async () => {
+  const canChange = userProfile?.canChangeUsername || 0;
+  if (canChange <= 0) {
+    const newU = prompt('Novo username pretendido (pedido enviado ao ADM):');
+    if (!newU || newU.length < 3) return;
+    if (!/^[a-z0-9_]+$/.test(newU.toLowerCase())) { alert('Username inválido.'); return; }
+    saveProfile({ nameRequest: { newUsername: newU.toLowerCase(), ts: Date.now(), status: 'pending' } });
+    document.getElementById('username-req-status').textContent = '⏳ Pendente';
+    alert('✅ Pedido enviado ao ADM!');
+  } else {
+    const newU = prompt(`Podes mudar de username (${canChange}x disponível):`);
+    if (!newU || newU.length < 3) return;
+    const lower = newU.toLowerCase();
+    const exists = await indexLookup(lower);
+    if (exists) { alert('Username já existe.'); return; }
+    const indexId = await getIndexBinId();
+    const rec = await jbinRead(indexId);
+    const users = rec?.users || {};
+    const oldEntry = users[_session.username];
+    if (oldEntry) { users[lower] = { ...oldEntry }; delete users[_session.username]; await jbinUpdate(indexId, { ...rec, users }); }
+    saveProfile({ username: lower, canChangeUsername: canChange - 1, nameRequest: null });
+    _session.username = lower;
+    localStorage.setItem(LS_SESSION, JSON.stringify(_session));
+    document.getElementById('prof-username-disp').textContent = '@' + lower;
+    alert('✅ Username alterado para @' + lower);
+  }
+};
+
+// ============================================================
+// VIDEOS SCREEN
+// ============================================================
+async function renderVideoScreen() {
+  const el = document.getElementById('video-container');
+  el.innerHTML = '<div style="color:var(--gray);font-size:12px;padding:20px 0;">⏳ A carregar vídeo de hoje...</div>';
+  try {
+    const idxRec = await jbinRead(FIXED_INDEX_BIN_ID);
+    const quizBinId = idxRec?.quizBinId;
+    let videos = [];
+    if (quizBinId) {
+      const qRec = await jbinRead(quizBinId);
+      videos = qRec?.dailyVideos || [];
+    }
+    if (!videos.length) {
+      el.innerHTML = `<div style="background:var(--dark2);border:1px solid rgba(0,200,255,0.15);padding:24px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:12px;">🎬</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Sem vídeo hoje</div>
+        <div style="font-size:12px;color:var(--gray);">Os ADMs ainda não publicaram o vídeo de hoje. Volta mais tarde!</div>
+      </div>`;
+      return;
+    }
+    const today = getTodayKey();
+    const swaps = userProfile?.videoSwappedToday?.[today] || 0;
+    const dayNum = Math.floor(Date.now() / 86400000);
+    const idx = (dayNum + swaps) % videos.length;
+    const video = videos[idx];
+    const isYoutube = video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be'));
+    const isVimeo = video.url && video.url.includes('vimeo.com');
+
+    let embedHtml = '';
+    if (isYoutube) {
+      let vid = '';
+      try {
+        const u = new URL(video.url);
+        vid = u.searchParams.get('v') || u.pathname.split('/').pop();
+      } catch(e) { vid = video.url.split('v=')[1]?.split('&')[0] || ''; }
+      embedHtml = `<iframe class="video-embed" src="https://www.youtube.com/embed/${vid}?rel=0" allowfullscreen></iframe>`;
+    } else if (isVimeo) {
+      const vid = video.url.split('/').pop();
+      embedHtml = `<iframe class="video-embed" src="https://player.vimeo.com/video/${vid}" allowfullscreen></iframe>`;
+    } else if (video.url) {
+      embedHtml = `<video class="video-embed" src="${video.url}" controls></video>`;
+    } else {
+      embedHtml = `<div class="video-embed" style="display:flex;align-items:center;justify-content:center;background:var(--dark3);font-size:36px;">🎬</div>`;
+    }
+
+    const watched = (userProfile?.videosWatched || 0) + (userProfile?.videoWatchedToday?.[today] ? 0 : 1);
+    if (!userProfile?.videoWatchedToday?.[today]) {
+      const vwt = userProfile?.videoWatchedToday || {};
+      vwt[today] = true;
+      saveProfile({ videosWatched: watched, videoWatchedToday: vwt });
+      addHistory('video', `Vídeo: ${video.title || 'Diário'}`, 0, 0);
+      checkVideoAchievements();
+    }
+
+    el.innerHTML = `
+      <div class="video-daily-card">
+        <div class="video-daily-badge">📅 Vídeo de Hoje</div>
+        <div class="video-daily-badge-swap" onclick="spendCoins('video',3000)">
+          <div class="rc-icon">R</div> 3000 — Trocar
+        </div>
+        ${embedHtml}
+        <div class="video-info">
+          <div class="video-title">${video.title || 'Vídeo do Dia'}</div>
+          <div class="video-desc">${video.desc || ''}</div>
+          <div class="video-meta">
+            ${video.tags ? video.tags.map(t=>`<span class="video-chip">${t}</span>`).join('') : ''}
+            <span class="video-chip">${today}</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--gray);text-align:center;padding:8px 0;">Vídeo ${idx+1} de ${videos.length} · Troca por <span style="color:var(--coin)">3000 <span class="rc-icon" style="display:inline-flex">R</span></span></div>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);font-size:12px;padding:20px 0;">Erro ao carregar vídeo: ${e.message}</div>`;
+  }
+}
+
+// ============================================================
+// GROUPS & CHAT
+// ============================================================
+let currentGroupId = null;
+let chatPollInterval = null;
+
+async function getGroupsBinId() {
+  const indexId = localStorage.getItem(INDEX_BIN_LS);
+  const rec = await jbinRead(indexId);
+  if (rec?.groupsBinId) return rec.groupsBinId;
+  const gId = await jbinCreate({ groups: {} });
+  await jbinUpdate(indexId, { ...rec, groupsBinId: gId });
+  return gId;
+}
+
+async function readGroups() {
+  const gId = await getGroupsBinId();
+  const rec = await jbinRead(gId);
+  return { binId: gId, groups: rec?.groups || {} };
+}
+
+async function writeGroups(gId, groups) { await jbinUpdate(gId, { groups }); }
+
+async function loadGroups() {
+  const el = document.getElementById('groups-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:12px;padding:20px;">A carregar...</div>';
+  try {
+    const { groups } = await readGroups();
+    const uname = _session?.username;
+    const myGroups = [], publicGroups = [];
+    for (const [id, g] of Object.entries(groups)) {
+      if (g.type === 'private') { if (g.members?.includes(uname) || g.owner === uname) myGroups.push({id,...g}); }
+      else publicGroups.push({id,...g});
+    }
+    const all = [...myGroups, ...publicGroups];
+    if (!all.length) { el.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:12px;padding:20px;">Nenhum grupo ainda.</div>'; return; }
+    el.innerHTML = all.map(g => `
+      <div class="group-card" onclick="openGroupChat('${g.id}','${escHtml(g.name)}')">
+        <div class="group-card-top">
+          <div class="group-icon">${g.icon||'💬'}</div>
+          <div class="group-info">
+            <div class="group-name">${escHtml(g.name)}</div>
+            <div class="group-meta">${g.members?.length||0} membros</div>
+          </div>
+          <span class="group-badge ${g.type==='private'?'badge-priv':'badge-pub'}">${g.type==='private'?'🔒 Privado':'🌐 Público'}</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+window.openCreateGroup = async () => {
+  const name = prompt('Nome do grupo:'); if (!name) return;
+  const icon = prompt('Emoji (ex: 🎯):') || '💬';
+  const type = confirm('Grupo público? (Cancela = Privado)') ? 'public' : 'private';
+  let keyHash = null;
+  if (type === 'public') {
+    const key = prompt('Chave de acesso:'); if (!key) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('grp_' + key));
+    keyHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const canWrite = !confirm('Restringir quem escreve? (OK = só dono, Cancela = todos)');
+  const canPhoto = confirm('Permitir fotos?');
+  const gId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const { binId, groups } = await readGroups();
+  groups[gId] = { name, icon, type, keyHash: keyHash||null, owner: _session.username, members: [_session.username], settings: { canWrite, canPhoto }, messages: [], createdAt: Date.now() };
+  await writeGroups(binId, groups);
+  await loadGroups();
+};
+
+window.openJoinGroup = async () => {
+  const key = prompt('Chave de acesso do grupo:'); if (!key) return;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('grp_' + key));
+  const inputHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const { binId, groups } = await readGroups();
+  const match = Object.entries(groups).find(([,g]) => g.type==='public' && g.keyHash===inputHash);
+  if (!match) { alert('Chave incorreta.'); return; }
+  const [gId, g] = match;
+  if (!g.members) g.members = [];
+  if (!g.members.includes(_session.username)) { g.members.push(_session.username); groups[gId] = g; await writeGroups(binId, groups); }
+  openGroupChat(gId, g.name);
+};
+
+window.openGroupChat = async (gId, name) => {
+  currentGroupId = gId;
+  document.getElementById('chat-group-name').textContent = name;
+  showScreen('screen-chat');
+  const { groups } = await readGroups();
+  const g = groups[gId];
+  const isOwner = g?.owner === _session.username || isAdm();
+  document.getElementById('chat-settings-btn').style.display = isOwner ? '' : 'none';
+  const canWrite = g?.settings?.canWrite || g?.owner === _session.username || isAdm();
+  const bar = document.getElementById('chat-input-bar');
+  if (bar) bar.style.display = canWrite ? '' : 'none';
+  const imgLabel = document.getElementById('chat-img-label');
+  if (imgLabel) imgLabel.style.display = (g?.settings?.canPhoto && canWrite) ? '' : 'none';
+  renderMessages(g?.messages || []);
+  if (chatPollInterval) clearInterval(chatPollInterval);
+  chatPollInterval = setInterval(async () => {
+    if (currentGroupId !== gId) { clearInterval(chatPollInterval); return; }
+    const { groups: gs } = await readGroups();
+    renderMessages(gs[gId]?.messages || []);
+  }, 8000);
+};
+
+function renderMessages(msgs) {
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  if (!msgs.length) { el.innerHTML = '<div style="color:var(--gray);font-size:12px;text-align:center;padding:20px;">Sem mensagens ainda.</div>'; return; }
+  el.innerHTML = msgs.map(m => {
+    const isMine = m.user === _session?.username;
+    const isVerified = m.user === ADM_USER;
+    return `<div class="chat-msg ${isMine?'mine':''}">
+      <div class="msg-avatar"><img src="${escHtml(m.avatar||defaultAvatar())}" onerror="this.src='${defaultAvatar()}'"></div>
+      <div>
+        <div class="msg-name">${escHtml(m.display||m.user)}${isVerified?'<span class="verified">✓</span>':''}
+          <span style="color:rgba(155,155,155,0.4)">${new Date(m.ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        ${m.text ? `<div class="msg-bubble"><div class="msg-text">${escHtml(m.text)}</div></div>` : ''}
+        ${m.img ? `<div class="msg-bubble"><img class="msg-img" src="${m.img}" onclick="window.open(this.src,'_blank')"></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function defaultAvatar() {
+  return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23243447'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%23ff4655' opacity='.6'/%3E%3Cellipse cx='20' cy='35' rx='12' ry='9' fill='%23ff4655' opacity='.4'/%3E%3C/svg%3E";
+}
+
+window.sendMsg = async () => {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !currentGroupId) return;
+  input.value = '';
+  await pushMessage({ text });
+};
+
+window.sendImage = async (input) => {
+  const file = input.files[0]; if (!file || !currentGroupId) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const max = 600; let w = img.width, h = img.height;
+      if (w > max) { h = h*(max/w); w = max; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      await pushMessage({ img: canvas.toDataURL('image/jpeg', 0.7) });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file); input.value = '';
+};
+
+async function pushMessage(payload) {
+  const { binId, groups } = await readGroups();
+  const g = groups[currentGroupId]; if (!g) return;
+  const msgs = g.messages || [];
+  msgs.push({ user: _session.username, display: userProfile?.displayName || _session.username, avatar: userProfile?.photoURL || '', ts: Date.now(), ...payload });
+  if (msgs.length > 200) msgs.splice(0, msgs.length - 200);
+  g.messages = msgs; groups[currentGroupId] = g;
+  await writeGroups(binId, groups);
+  renderMessages(msgs);
+}
+
+window.openGroupSettings = async () => {
+  const { binId, groups } = await readGroups();
+  const g = groups[currentGroupId]; if (!g) return;
+  const choice = prompt(`"${g.name}":\n1-Mudar nome\n2-Todos escrevem: ${g.settings?.canWrite?'SIM':'NÃO'}\n3-Fotos: ${g.settings?.canPhoto?'SIM':'NÃO'}\n4-Apagar`);
+  if (!choice) return;
+  if (choice==='1') { const name = prompt('Novo nome:'); if (name) { g.name=name; document.getElementById('chat-group-name').textContent=name; } }
+  else if (choice==='2') { g.settings=g.settings||{}; g.settings.canWrite=!g.settings.canWrite; }
+  else if (choice==='3') { g.settings=g.settings||{}; g.settings.canPhoto=!g.settings.canPhoto; }
+  else if (choice==='4') { if (confirm('Apagar permanentemente?')) { delete groups[currentGroupId]; await writeGroups(binId,groups); showScreen('screen-groups'); loadGroups(); return; } }
+  groups[currentGroupId]=g; await writeGroups(binId,groups);
+};
+
+// ============================================================
+// ABILITY NAMES
+// ============================================================
+const ABILITY_NAMES = {
+  "Shrouded Step":"Passo Encoberto","Dark Cover":"Fumo Escuro","Paranoia":"Paranoia","From the Shadows":"Das Sombras",
+  "Updraft":"Corrente Ascendente","Tailwind":"Vento de Cauda","Cloudburst":"Rajada Nebulosa","Blade Storm":"Tempestade de Lâminas",
+  "Healing Orb":"Orbe de Cura","Slow Orb":"Orbe Lenta","Barrier Orb":"Orbe Barreira","Resurrection":"Ressurreição",
+  "Owl Drone":"Drone Coruja","Shock Bolt":"Flecha de Choque","Recon Bolt":"Flecha de Reconhecimento","Hunter's Fury":"Fúria do Caçador",
+  "Nanoswarm":"Nanoenxame","Alarmbot":"Bot Alarme","Turret":"Torrinha","Lockdown":"Bloqueio",
+  "Boom Bot":"Bot Explosivo","Blast Pack":"Pacote Explosivo","Paint Shells":"Granada de Fragmentação","Showstopper":"Arrasadora",
+  "Trapwire":"Armadilha","Cyber Cage":"Gaiola Cibernética","Spycam":"Câmera Espiã","Neural Theft":"Roubo Neural",
+  "Pick-Me-Up":"Anime-te","Meddle":"Interferência","Not Dead Yet":"Ainda Não Morri","Ruse":"Ardil",
+  "Nova Pulse":"Pulso Nova","Nebula":"Nebulosa","Gravity Well":"Poço Gravitacional","Cosmic Divide":"Divisão Cósmica",
+  "Stim Beacon":"Farol de Estímulo","Incendiary":"Incendiária","Sky Smoke":"Fumo Aéreo","Orbital Strike":"Ataque Orbital",
+  "Leer":"Olhar Assustador","Devour":"Devorar","Dismiss":"Dispensar","Empress":"Imperatriz",
+  "Undercut":"Corte Baixo","Double Tap":"Duplo Toque","Contingency":"Contingência","Kill Contract":"Contrato de Morte",
+  "Fakeout":"Embuste","Blindside":"Ponto Cego","Gatecrash":"Irrupção","Dimensional Drift":"Deriva Dimensional",
+  "Trademark":"Marca Registada","Headhunter":"Caçador de Cabeças","Rendezvous":"Encontro","Tour de Force":"Tour de Force",
+  "Seize":"Apresar","Prowler":"Perseguidor","Haunt":"Assombrar","Nightfall":"Queda da Noite",
+  "FLASH/drive":"FLASH/drive","ZERO/point":"ZERO/point","NULL/cmd":"NULL/cmd",
+  "Wingman":"Asa","Dizzy":"Tonto","Globbys":"Globbys","Thrash":"Thrash",
+};
+
+function processAbilityText(text) {
+  if (!appSettings.abilityNames) return text;
+  let t = text;
+  for (const [en, pt] of Object.entries(ABILITY_NAMES)) {
+    t = t.replace(new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g'), pt);
+  }
+  return t;
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+window.setBnav = (id) => {
+  document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('on'));
+  const el = document.getElementById(id);
+  if(el) el.classList.add('on');
+};
+
+window.openAimTrainer = () => window.open('aim-trainer.html', '_blank');
+window.addFriend = () => alert('Sistema de amigos requer conta online.');
+window.copyFriendCode = () => { const code = userProfile?.friendCode || ''; navigator.clipboard?.writeText(code); };
+
+window.showScreen = (id) => {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='screen-scenarios') initScenarios();
+  if(id==='screen-agents') initAgentsScreen();
+  if(id==='screen-callouts') initCallouts();
+  if(id==='screen-glossary') renderGlossary(GLOSSARY_TERMS);
+  if(id==='screen-tips') renderTips();
+  if(id==='screen-videos') renderVideoScreen();
+  if(id==='screen-profile') {
+    updateHUD(); updateAvatars(); renderAchievements(); renderHistory(); checkAdmUI();
+    document.getElementById('my-friend-code').textContent = '—local—';
+  }
+  if(id==='screen-groups') loadGroups();
+  if(id==='screen-adm') loadAdmRequests();
+  if(id !== 'screen-chat' && chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; currentGroupId = null; }
+};
+
+// ============================================================
+// SEEDED RANDOM
+// ============================================================
+function seededRng(seed) { let s=seed; return ()=>{ s=(s*9301+49297)%233280; return s/233280; }; }
+function hashDate() { const d=new Date(); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
+function getUserSeed() { const name = userProfile?.displayName||'player'; return name.split('').reduce((a,c)=>a+c.charCodeAt(0),0); }
+
+// ============================================================
+// SCENARIO DATA — Carregado pelo Cloud (Manager)
+// ============================================================
+const ALL_SCENARIOS = [];
+
+// ============================================================
+// CALLOUT DATA — Carregado pelo Cloud (Manager)
+// ============================================================
+const CALLOUT_QUESTIONS = [];
+
+// ============================================================
+// GLOSSARY & TIPS
+// ============================================================
+const GLOSSARY_TERMS = [
+  {abbr:"IGL",full:"In-Game Leader",desc:"Líder tático — responsável por calls, estratégias e gestão do round.",tag:"Função"},
+  {abbr:"ECO",full:"Economy Round",desc:"Round onde a equipa poupa créditos para rounds seguintes.",tag:"Economia"},
+  {abbr:"FORCE BUY",full:"Force Purchase",desc:"Gastar tudo sem créditos para full buy — geralmente por desespero.",tag:"Economia"},
+  {abbr:"FULL BUY",full:"Full Purchase",desc:"Rifles + armadura + utilities — estado ideal para a equipa.",tag:"Economia"},
+  {abbr:"EXECUTE",full:"Site Execute",desc:"Ataque coordenado a um site usando utilities para limpar antes de entrar.",tag:"Ataque"},
+  {abbr:"FAKE",full:"Fake Execute",desc:"Simular pressão num site para forçar rotação, depois atacar o oposto.",tag:"Ataque"},
+  {abbr:"LURK",full:"Lurker",desc:"Player que se separa para flanquear adversários ou criar pressão.",tag:"Posição"},
+  {abbr:"ANCHOR",full:"Site Anchor",desc:"Player que fica no site para ganhar tempo enquanto colegas rotam.",tag:"Defesa"},
+  {abbr:"RETAKE",full:"Site Retake",desc:"Recuperar um site depois de adversários plantarem a spike.",tag:"Defesa"},
+  {abbr:"CT",full:"Counter-Terrorist Spawn",desc:"Zona de spawn dos defensores e corredores que ligam ao spawn.",tag:"Callout"},
+  {abbr:"HEAVEN",full:"High Ground",desc:"Posição elevada num site com visão para baixo.",tag:"Callout"},
+  {abbr:"CROSSFIRE",full:"Crossfire",desc:"Dois players em ângulos opostos cobrindo a mesma entrada.",tag:"Tática"},
+  {abbr:"JIGGLE",full:"Jiggle Peek",desc:"Movimento rápido de aparecer/desaparecer para recolher info.",tag:"Mecânica"},
+  {abbr:"OFF ANGLE",full:"Unexpected Angle",desc:"Posicionar-se num ângulo que os adversários não esperam.",tag:"Posição"},
+  {abbr:"STACK",full:"Site Stack",desc:"Colocar mais players do que o normal num site.",tag:"Tática"},
+  {abbr:"ROTATE",full:"Rotation",desc:"Mover players de um site para outro em resposta a info.",tag:"Defesa"},
+  {abbr:"TRADE",full:"Trade Kill",desc:"Eliminar adversário imediatamente após ele matar um colega.",tag:"Mecânica"},
+  {abbr:"FLANK",full:"Flank Attack",desc:"Atacar adversários pelo lado ou trás enquanto focados noutra direção.",tag:"Ataque"},
+  {abbr:"SAVE",full:"Save Round",desc:"Não morrer para preservar equipamento no final de round perdido.",tag:"Economia"},
+  {abbr:"DEFAULT",full:"Default Setup",desc:"Posicionamento inicial padrão antes de ter informação.",tag:"Tática"},
+  {abbr:"ENTRY",full:"Entry Fragger",desc:"Player que entra primeiro no site durante uma executa.",tag:"Função"},
+  {abbr:"UTILITY",full:"Ability Usage",desc:"Todas as abilities dos agentes — smokes, flashes, mollies, etc.",tag:"Mecânica"},
+  {abbr:"TIMINGS",full:"Map Timings",desc:"Quanto tempo demora a chegar a certas posições do mapa.",tag:"Conhecimento"},
+  {abbr:"PRESSURE",full:"Map Pressure",desc:"Controlar zonas para forçar o adversário a reajustar.",tag:"Tática"},
+  {abbr:"ANTI-ECO",full:"Anti-Economy Round",desc:"Full buy contra equipa em eco — alta probabilidade de vitória.",tag:"Economia"},
+  {abbr:"SMOKE",full:"Smoke Screen",desc:"Bloqueio de visão — usado para cobrir entradas em executas ou defender.",tag:"Utility"},
+  {abbr:"FLASH",full:"Flash/Blind",desc:"Ability que cega temporariamente — cria janelas seguras de entrada.",tag:"Utility"},
+  {abbr:"POP FLASH",full:"Pop Flash",desc:"Flash que chega sem aviso ao alvo — sem tempo de virar.",tag:"Mecânica"},
+  {abbr:"MOLLY",full:"Incendiary/Fire Ability",desc:"Qualquer ability de fogo que causa dano numa área — nega posições.",tag:"Utility"},
+];
+
+const IGL_TIPS = [
+  {title:"Chama primeiro, pergunta depois",text:"Um IGL que hesita perde mais rounds do que um que erra. Decisões rápidas são melhor que indecisão."},
+  {title:"Fala menos, fala melhor",text:"Calls curtas: 'B execute, Brim smoke gen, entram quando smoke cai.' Não explicas em tempo real — treinas antes."},
+  {title:"Informação antes de compromisso",text:"Nunca comprometas a equipa inteira sem informação. Primeiros 30-40s = recolher info, não atacar às cegas."},
+  {title:"Adapta mid-round",text:"A estratégia inicial é apenas o ponto de partida. Flexibilidade tática separa IGLs médios de bons."},
+  {title:"Gere a economia da equipa",text:"No buy phase, sabe o crédito de cada colega e comunica o tipo de round. Equipa descoordinada perde antes de começar."},
+  {title:"Defende a moral da equipa",text:"Quando estão a perder, o teu tom de voz é tão importante como as calls. Mantém-te calmo e construtivo."},
+  {title:"Aprende os timings do mapa",text:"Saber quanto tempo demora de cada ponto permite prever posições e coordenar rotações com precisão."},
+  {title:"Usa o teu 5º player com sabedoria",text:"O lurker é a tua informação gratuita. Posicioná-lo para recolher info sem se expor é uma skill subestimada."},
+  {title:"Analisa rounds perdidos",text:"Rounds perdidos ensinam o que não sabes. Rounds ganhos confirmam o que sabes. Foca nos primeiros."},
+  {title:"Não precisas de ser o melhor mecânico",text:"Muitos dos melhores IGLs não são os melhores aim-wise. O teu trabalho é PENSAR e COMUNICAR."},
+];
+
+// ============================================================
+// AGENT DATA — Perguntas carregadas pelo Cloud (Manager)
+// ============================================================
+const AGENTS = {
+  "Omen":     {emoji:"🌑",role:"Controller",color:"controller",questions:[]},
+  "Jett":     {emoji:"💨",role:"Duelist",   color:"duelist",   questions:[]},
+  "Sage":     {emoji:"🌿",role:"Sentinel",  color:"sentinel",  questions:[]},
+  "Sova":     {emoji:"🏹",role:"Initiator", color:"initiator", questions:[]},
+  "Killjoy":  {emoji:"🤖",role:"Sentinel",  color:"sentinel",  questions:[]},
+  "Raze":     {emoji:"💣",role:"Duelist",   color:"duelist",   questions:[]},
+  "Cypher":   {emoji:"🕵️",role:"Sentinel",  color:"sentinel",  questions:[]},
+  "Clove":    {emoji:"☘️",role:"Controller",color:"controller",questions:[]},
+  "Astra":    {emoji:"🌌",role:"Controller",color:"controller",questions:[]},
+  "Brimstone":{emoji:"🔥",role:"Controller",color:"controller",questions:[]},
+  "Reyna":    {emoji:"💜",role:"Duelist",   color:"duelist",   questions:[]},
+  "Iso":      {emoji:"🔷",role:"Duelist",   color:"duelist",   questions:[]},
+  "Yoru":     {emoji:"🃏",role:"Duelist",   color:"duelist",   questions:[]},
+  "Chamber":  {emoji:"🎩",role:"Sentinel",  color:"sentinel",  questions:[]},
+  "Fade":     {emoji:"🌙",role:"Initiator", color:"initiator", questions:[]},
+  "KAYO":     {emoji:"⚙️",role:"Initiator", color:"initiator", questions:[]},
+  "Gekko":    {emoji:"🦎",role:"Initiator", color:"initiator", questions:[]},
+};
+
+const AGENT_NAMES_ALL = Object.keys(AGENTS);
+
+// ============================================================
+// SCENARIO QUIZ
+// ============================================================
+let scenQ=[], scenIdx=0, scenCorrect=0, scenXP=0, scenCoins=0, scenAnswered=false;
+
+function initScenarios() {
+  if (!_cloudLoaded) {
+    document.getElementById('quiz-container').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
+      <div style="font-size:36px;margin-bottom:12px;">⏳</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;">A carregar conteúdo...</div>
+    </div>`;
+    return;
+  }
+  if (!ALL_SCENARIOS.length) {
+    document.getElementById('quiz-container').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
+      <div style="font-size:36px;margin-bottom:12px;">🎯</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Sem cenários disponíveis</div>
+      <div style="font-size:12px;">Os ADMs ainda não publicaram cenários. Volta mais tarde!</div>
+    </div>`;
+    return;
+  }
+  const seed = getUserSeed() + hashDate();
+  const rng = seededRng(seed);
+  scenQ = [...ALL_SCENARIOS].sort(()=>rng()-.5).slice(0,12);
+  scenIdx=0; scenCorrect=0; scenXP=0; scenCoins=0;
+  renderScenario();
+}
+
+function renderScenario() {
+  const q = scenQ[scenIdx], tot = scenQ.length;
+  const letters=['A','B','C','D'];
+  const infoH = q.info.map(i=>`<div class="info-chip">${i.l}: <strong>${i.v}</strong></div>`).join('');
+  const optsH = q.options.map((o,i)=>`<button class="opt-btn" onclick="answerScen(${i})"><span class="opt-l">${letters[i]}</span><span>${o.t}</span></button>`).join('');
+  document.getElementById('quiz-container').innerHTML = `
+    <div class="q-hdr"><span class="q-title">Cenário Tático</span>
+      <div class="q-bar-wrap"><div class="q-bar-fill" style="width:${(scenIdx/tot)*100}%"></div></div>
+      <span class="q-counter">${scenIdx+1}/${tot}</span></div>
+    <div class="scen-box"><div class="scen-tag">${q.map} — ${q.round}</div>
+      <h3>${q.title}</h3><p>${q.desc}</p>
+      <div class="scen-info">${infoH}</div></div>
+    <div class="opts-grid">${optsH}</div>
+    <div class="fb-box" id="fb"></div>
+    <button class="nxt-btn" id="snxt" onclick="nextScen()">${scenIdx<tot-1?'Próximo →':'Ver Resultados →'}</button>`;
+  scenAnswered=false;
+}
+
+window.answerScen = (idx) => {
+  if(scenAnswered) return; scenAnswered=true;
+  const q=scenQ[scenIdx], correct=q.options.findIndex(o=>o.c), isOk=idx===correct;
+  document.querySelectorAll('.opt-btn').forEach((b,i)=>{b.disabled=true;if(i===correct)b.classList.add('correct');if(i===idx&&!isOk)b.classList.add('wrong');});
+  const fb=document.getElementById('fb');
+  fb.classList.add('show',isOk?'cfb':'wfb');
+  fb.innerHTML=`<div class="fb-title">${isOk?'✓ CORRETO':'✗ NÃO ERA A MELHOR CALL'}</div><div class="fb-text">${q.feedback}</div><div class="tip-box"><strong>💡 Dica IGL:</strong> ${q.tip}</div>`;
+  if(isOk){ scenCorrect++; scenXP+=50; addXP(50); scenCoins+=100; addCoins(100,'Quiz Tático'); }
+  document.getElementById('snxt').classList.add('show');
+};
+
+window.nextScen = async () => {
+  scenIdx++;
+  if(scenIdx>=scenQ.length) {
+    const newTotal = (userProfile?.scenariosTotal||0) + scenQ.length;
+    saveProfile({ scenariosTotal: newTotal });
+    userProfile.scenariosTotal = newTotal;
+    checkScenarioAchievements(scenCorrect, scenQ.length, newTotal);
+    addHistory('quiz', `Cenários Táticos — ${scenCorrect}/${scenQ.length}`, scenCoins, 0);
+    markDailyDone();
+    showResults('scenarios', scenCorrect, scenQ.length, scenXP, scenCoins, ()=>showScreen('screen-scenarios'));
+  } else { renderScenario(); }
+};
+
+// ============================================================
+// AGENTS
+// ============================================================
+function initAgentsScreen() {
+  if (!_cloudLoaded) {
+    document.getElementById('agents-showcase').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
+      <div style="font-size:36px;margin-bottom:12px;">⏳</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;">A carregar agentes...</div>
+    </div>`;
+    return;
+  }
+  const today = getTodayKey();
+  let dailyAgents;
+  const forced = userProfile?.forcedAgents;
+  // FIX: usar contador de rerolls para gerar seed única em cada reroll
+  const rerollCount = userProfile?.agentsRerollCount?.[today] || 0;
+
+  // Aplicar agentes forçados pelo ADM apenas se não houve reroll hoje
+  if (rerollCount === 0 && forced && forced.date === today && Array.isArray(forced.agents) && forced.agents.length === 3) {
+    dailyAgents = forced.agents.filter(a => AGENTS[a]);
+    if (dailyAgents.length !== 3) dailyAgents = null;
+  }
+
+  if (!dailyAgents) {
+    // Cada reroll usa um multiplicador primo para garantir seed diferente
+    const seed = getUserSeed() + hashDate() + (rerollCount * 7919);
+    const rng = seededRng(seed);
+    dailyAgents = [...AGENT_NAMES_ALL].sort(()=>rng()-.5).slice(0,3);
+  }
+
+  const todayDone = userProfile?.agentsDoneToday||{};
+  let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+  dailyAgents.forEach(name=>{
+    const ag=AGENTS[name]; if (!ag) return;
+    const isDone = todayDone[today]?.includes(name)||false;
+    const hasQuestions = ag.questions.length > 0;
+    html+=`<div class="ag-card ${isDone?'done':''}" onclick="${hasQuestions?`startAgentQuiz('${name}')` : 'alert(\"Sem simulações disponíveis ainda. Os ADMs estão a adicionar conteúdo!\")'}" >
+      ${isDone?'<div class="ag-done-stamp">✓</div>':''}
+      <span class="ag-emoji">${ag.emoji}</span>
+      <div class="ag-name">${name}</div>
+      <div class="ag-role ${ag.color}">${ag.role}</div>
+      <div style="font-size:10px;color:var(--gray);margin-bottom:8px">${ag.questions.length} simulações</div>
+      <div class="ag-start">${isDone?'✓ Feito': hasQuestions ? '→ Treinar' : '⏳ Em breve'}</div>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('agents-showcase').innerHTML=html;
+}
+
+let aqAgent=null,aqIdx=0,aqCorrect=0,aqXP=0,aqCoins=0,aqAnswered=false;
+
+window.startAgentQuiz = (name) => { aqAgent=name; aqIdx=0; aqCorrect=0; aqXP=0; aqCoins=0; showScreen('screen-agent-quiz'); renderAQ(); };
+
+function renderAQ() {
+  const ag=AGENTS[aqAgent], q=ag.questions[aqIdx], tot=ag.questions.length;
+  const letters=['A','B','C','D'];
+  const desc = processAbilityText(q.desc);
+  const optsH=q.options.map((o,i)=>`<button class="opt-btn" onclick="answerAQ(${i})"><span class="opt-l" style="color:var(--purple)">${letters[i]}</span><span>${processAbilityText(o.t)}</span></button>`).join('');
+  document.getElementById('agent-quiz-container').innerHTML=`
+    <div class="aq-hdr"><div class="aq-emoji">${ag.emoji}</div>
+      <div class="aq-info"><h3>${aqAgent}</h3><p>${ag.role} · ${aqIdx+1}/${tot}</p></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:9px;letter-spacing:2px;color:var(--gray);text-transform:uppercase">progresso</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:var(--purple)">${Math.round((aqIdx/tot)*100)}%</div></div></div>
+    <div style="height:3px;background:rgba(255,255,255,0.07);margin-bottom:16px;border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${(aqIdx/tot)*100}%;background:var(--purple);transition:width .4s"></div></div>
+    <div class="scen-box" style="border-left-color:var(--purple)">
+      <div class="scen-tag" style="color:var(--purple)">${aqAgent} — Situação ${aqIdx+1}</div>
+      <h3>${processAbilityText(q.title)}</h3><p>${desc}</p></div>
+    <div class="opts-grid">${optsH}</div>
+    <div class="fb-box" id="afb"></div>
+    <button class="nxt-btn" id="anxt" style="background:var(--purple)" onclick="nextAQ()">${aqIdx<tot-1?'Próxima Simulação →':'Ver Resultados →'}</button>`;
+  aqAnswered=false;
+}
+
+window.answerAQ=(idx)=>{
+  if(aqAnswered)return; aqAnswered=true;
+  const ag=AGENTS[aqAgent],q=ag.questions[aqIdx],correct=q.options.findIndex(o=>o.c),isOk=idx===correct;
+  document.querySelectorAll('.opt-btn').forEach((b,i)=>{b.disabled=true;if(i===correct)b.classList.add('correct');if(i===idx&&!isOk)b.classList.add('wrong');});
+  const fb=document.getElementById('afb');
+  fb.classList.add('show',isOk?'cfb':'wfb');
+  fb.innerHTML=`<div class="fb-title">${isOk?'✓ CORRETO':'✗ NÃO ERA A MELHOR JOGADA'}</div><div class="fb-text">${processAbilityText(q.feedback)}</div><div class="tip-box"><strong>💡 Dica ${aqAgent}:</strong> ${processAbilityText(q.tip)}</div>`;
+  if(isOk){ aqCorrect++; aqXP+=40; addXP(40); aqCoins+=50; addCoins(50,`Simulação ${aqAgent}`); }
+  document.getElementById('anxt').classList.add('show');
+};
+
+window.nextAQ=async()=>{
+  aqIdx++;
+  const ag=AGENTS[aqAgent];
+  if(aqIdx>=ag.questions.length){
+    let todayDone=userProfile?.agentsDoneToday||{};
+    const today=getTodayKey();
+    if(!todayDone[today])todayDone[today]=[];
+    if(!todayDone[today].includes(aqAgent)){
+      todayDone[today].push(aqAgent);
+      aqXP+=100; addXP(100);
+      aqCoins+=100; addCoins(100,`Agente ${aqAgent} completo`);
+    }
+    let agCompleted=userProfile?.agentsCompleted||[];
+    if(!agCompleted.includes(aqAgent))agCompleted.push(aqAgent);
+    saveProfile({agentsDoneToday:todayDone,agentsCompleted:agCompleted});
+    checkAgentAchievement(aqAgent);
+    addHistory('agent', `Simulações ${aqAgent} — ${aqCorrect}/${ag.questions.length}`, aqCoins, 0);
+    markDailyDone();
+    showResults('agents',aqCorrect,ag.questions.length,aqXP,aqCoins,()=>startAgentQuiz(aqAgent));
+  } else { renderAQ(); }
+};
+
+// ============================================================
+// CALLOUTS
+// ============================================================
+let coIdx=0,coCorrect=0,coCoins=0;
+function initCallouts(){
+  if (!_cloudLoaded) {
+    document.getElementById('callout-content').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
+      <div style="font-size:36px;margin-bottom:12px;">⏳</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;">A carregar callouts...</div>
+    </div>`;
+    return;
+  }
+  if (!CALLOUT_QUESTIONS.length) {
+    document.getElementById('callout-content').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
+      <div style="font-size:36px;margin-bottom:12px;">📡</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Sem callouts disponíveis</div>
+      <div style="font-size:12px;">Os ADMs ainda não publicaram callouts. Volta mais tarde!</div>
+    </div>`;
+    return;
+  }
+  coIdx=0;coCorrect=0;coCoins=0;renderCO();
+}
+function renderCO(){
+  const q=CALLOUT_QUESTIONS[coIdx];
+  const letters=['A','B','C','D'];
+  const optsH=q.options.map((o,i)=>`<button class="co-opt" onclick="answerCO(${i})">${letters[i]}. ${o}</button>`).join('');
+  document.getElementById('callout-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase">${q.map}</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.07)"></div>
+      <span style="font-size:10px;color:var(--gray)">${coIdx+1}/${CALLOUT_QUESTIONS.length}</span></div>
+    <div class="scen-box" style="border-left-color:var(--accent)">
+      <div class="scen-tag" style="color:var(--accent)">📡 Callout Quiz</div>
+      <h3>Identifica a Posição</h3><p>${q.question}</p></div>
+    <div class="co-grid">${optsH}</div>
+    <div class="fb-box" id="cofb" style="margin-top:10px"></div>
+    <button class="nxt-btn" id="conxt" onclick="nextCO()">${coIdx<CALLOUT_QUESTIONS.length-1?'Próxima →':'Ver Score →'}</button>`;
+}
+window.answerCO=(idx)=>{
+  const q=CALLOUT_QUESTIONS[coIdx],isOk=idx===q.correct;
+  document.querySelectorAll('.co-opt').forEach((b,i)=>{b.disabled=true;if(i===q.correct)b.classList.add('cc');if(i===idx&&!isOk)b.classList.add('wc');});
+  const fb=document.getElementById('cofb');
+  fb.classList.add('show',isOk?'cfb':'wfb');
+  fb.innerHTML=`<div class="fb-title">${isOk?'✓ CORRETO':'✗ ERRADO'}</div><div class="fb-text">${q.feedback}</div>`;
+  if(isOk){ coCorrect++; addXP(35); coCoins+=100; addCoins(100,'Callout Quiz'); }
+  document.getElementById('conxt').classList.add('show');
+};
+window.nextCO=async()=>{
+  coIdx++;
+  if(coIdx>=CALLOUT_QUESTIONS.length){
+    const pct=Math.round((coCorrect/CALLOUT_QUESTIONS.length)*100);
+    if(pct===100)unlockAchievement('callout_pro');
+    const newTotal=(userProfile?.calloutQuizzesTotal||0)+1;
+    saveProfile({calloutQuizzesTotal:newTotal});
+    if(newTotal>=10)unlockAchievement('callout_master');
+    addHistory('callout', `Callouts — ${coCorrect}/${CALLOUT_QUESTIONS.length}`, coCoins, 0);
+    document.getElementById('callout-content').innerHTML=`
+      <div style="text-align:center;padding:48px 16px 20px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:72px;color:var(--gold)">${pct}%</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:4px;color:var(--accent);margin-bottom:12px">CALLOUTS CORRETOS</div>
+        <p style="color:var(--gray);margin-bottom:28px">${coCorrect} de ${CALLOUT_QUESTIONS.length}</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--coin);">
+          <div class="rc-icon">R</div> +${coCoins} Radiante Coins ganhos
+        </div>
+        <button class="btn-red" onclick="initCallouts()">Repetir</button>
+        <button class="btn-ghost" onclick="showScreen('screen-home')">Menu</button></div>`;
+  }else{renderCO();}
+};
+
+// ============================================================
+// GLOSSARY & TIPS
+// ============================================================
+function renderGlossary(terms){ document.getElementById('glo-grid').innerHTML=terms.map(t=>`<div class="term-card"><div class="term-abbr">${t.abbr}</div><div class="term-full">${t.full}</div><div class="term-desc">${t.desc}</div><span class="term-tag">${t.tag}</span></div>`).join(''); }
+window.filterGlo=()=>{ const q=document.getElementById('glo-input').value.toLowerCase(); renderGlossary(GLOSSARY_TERMS.filter(t=>t.abbr.toLowerCase().includes(q)||t.full.toLowerCase().includes(q)||t.desc.toLowerCase().includes(q))); };
+function renderTips(){ document.getElementById('tips-list').innerHTML=IGL_TIPS.map((t,i)=>`<div class="tip-card"><div class="tip-num">${String(i+1).padStart(2,'0')}</div><div class="tip-content"><h3>${t.title}</h3><p>${t.text}</p></div></div>`).join(''); }
+
+// ============================================================
+// RESULTS SCREEN
+// ============================================================
+function showResults(source, correct, total, xpEarned, coinsEarned, repeatFn) {
+  const pct=Math.round((correct/total)*100);
+  let rank='IGL NOVICE',desc='Continua a treinar — cada erro é uma lição!';
+  if(pct>=90){rank='DECISÃO PERFEITA';desc='Calls impecáveis. A tua equipa tem sorte de ter-te como capitão!';}
+  else if(pct>=70){rank='IGL SÓLIDO';desc='Boa intuição tática! Revê os que falhaste para melhorar.';}
+  else if(pct>=50){rank='EM DESENVOLVIMENTO';desc='Boa base! Continua a treinar os cenários diariamente.';}
+  document.getElementById('res-grade').textContent=pct+'%';
+  document.getElementById('res-rank').textContent=rank;
+  document.getElementById('res-desc').textContent=desc;
+  document.getElementById('res-xp-flash').textContent='+'+xpEarned+' XP ganho';
+  const coinEl = document.getElementById('res-coin-flash');
+  coinEl.innerHTML = `<div class="rc-icon">R</div><span>+${coinsEarned} Radiante Coins</span>`;
+  document.getElementById('res-correct').textContent=correct;
+  document.getElementById('res-total').textContent=total;
+  document.getElementById('res-streak').textContent=currentStreak+'🎯';
+  document.getElementById('res-repeat').onclick=repeatFn;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-results').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  checkCoinAchievements(totalCoins);
+}
+
+// ============================================================
+// SPLASH & INIT
+// ============================================================
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const s=document.getElementById('splash');
+    s.style.transition='opacity .6s ease'; s.style.opacity='0';
+    setTimeout(()=>s.style.display='none',600);
+  },3800);
+  renderStreakBanner();
+});
+</script>
+</body>
+</html>
