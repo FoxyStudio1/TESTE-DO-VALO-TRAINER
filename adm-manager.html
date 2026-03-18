@@ -268,6 +268,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
       <button class="nav-btn" id="nav-callouts" onclick="goPanel('callouts')"><span class="ni">📡</span>Callouts</button>
 
       <div class="nav-section">Conteúdo</div>
+      <button class="nav-btn" id="nav-protrainer" onclick="goPanel('protrainer')"><span class="ni">🏆</span>Pro Trainer</button>
       <button class="nav-btn" id="nav-videos" onclick="goPanel('videos')"><span class="ni">🎬</span>Vídeos</button>
       <button class="nav-btn" id="nav-achievements" onclick="goPanel('achievements')"><span class="ni">🏆</span>Conquistas</button>
       <button class="nav-btn" id="nav-ranks" onclick="goPanel('ranks')"><span class="ni">⭐</span>Ranks</button>
@@ -303,6 +304,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
             <button class="btn btn-ghost" onclick="goPanel('agents');switchAgentTab('questions')">📝 + Pergunta Agente</button>
             <button class="btn btn-ghost" onclick="goPanel('scenarios')">🎯 + Cenário</button>
             <button class="btn btn-ghost" onclick="goPanel('achievements')">🏆 + Conquista</button>
+            <button class="btn btn-ghost" onclick="goPanel('protrainer')">🏆 + Pro Trainer</button>
             <button class="btn btn-ghost" onclick="goPanel('requests')">📩 Ver Pedidos</button>
           </div>
         </div>
@@ -575,6 +577,122 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
         </div>
       </div>
 
+      <!-- PRO TRAINER -->
+      <div class="panel" id="panel-protrainer">
+        <div class="panel-title">🏆 Pro Trainer</div>
+        <div class="panel-sub">Cria simulações Pro com foto da situação, contexto e foto da resposta</div>
+
+        <div class="card">
+          <div class="card-title" id="pt-form-title">➕ Nova Simulação Pro</div>
+
+          <!-- ROW 1: title + map -->
+          <div class="form-grid">
+            <div class="field-group">
+              <span class="f-label">Título</span>
+              <input class="f-input" id="pt-title" type="text" placeholder="Ex: Rotação B → A com spike">
+            </div>
+            <div class="field-group">
+              <span class="f-label">Mapa</span>
+              <input class="f-input" id="pt-map" type="text" placeholder="Ex: Ascent, Bind...">
+            </div>
+          </div>
+
+          <!-- ROW 2: round + money/mode -->
+          <div class="form-grid" style="margin-top:10px;">
+            <div class="field-group">
+              <span class="f-label">Ronda</span>
+              <input class="f-input" id="pt-round" type="text" placeholder="Ex: Round 12 · Eco · Full Buy">
+            </div>
+            <div class="field-group">
+              <span class="f-label">Modo / Dinheiro</span>
+              <input class="f-input" id="pt-money" type="text" placeholder="Ex: 3v3 · 4v4 · $3800">
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="field-group" style="margin-top:10px;">
+            <span class="f-label">Descrição da Situação</span>
+            <textarea class="f-input f-textarea" id="pt-desc" placeholder="Descreve o que está a acontecer na imagem..."></textarea>
+          </div>
+
+          <!-- Extra note -->
+          <div class="field-group" style="margin-top:10px;">
+            <span class="f-label">Nota Extra (opcional)</span>
+            <input class="f-input" id="pt-extra" type="text" placeholder="Ex: Tens flash disponível · Adversário tem Op">
+          </div>
+
+          <!-- SITUATION IMAGE -->
+          <div style="margin-top:14px;">
+            <span class="f-label">📸 Foto da Situação</span>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <input class="f-input" id="pt-sit-url" type="text" placeholder="URL da imagem (imgur, etc)..." style="flex:1;" oninput="previewSitImg()">
+              <label style="padding:9px 14px;background:var(--dark);border:1px solid rgba(255,255,255,0.1);color:var(--gray);cursor:pointer;font-size:12px;white-space:nowrap;">
+                📁 Upload
+                <input type="file" accept="image/*" style="display:none" onchange="uploadPtImg(this,'sit')">
+              </label>
+            </div>
+            <div id="pt-sit-preview" style="margin-top:8px;width:100%;aspect-ratio:16/9;background:var(--dark3);display:none;overflow:hidden;border:1px solid rgba(255,255,255,0.07);">
+              <img id="pt-sit-img" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+          </div>
+
+          <!-- OPTIONS 3x -->
+          <div style="margin-top:14px;">
+            <span class="f-label">Opções (A/B/C) — marca a correta</span>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="radio" name="pt-correct" value="0" style="accent-color:var(--green);width:16px;height:16px;flex-shrink:0;">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gray);width:14px;">A</span>
+                <input class="f-input" id="pt-opt0" type="text" placeholder="Opção A..." style="flex:1;">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="radio" name="pt-correct" value="1" style="accent-color:var(--green);width:16px;height:16px;flex-shrink:0;">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gray);width:14px;">B</span>
+                <input class="f-input" id="pt-opt1" type="text" placeholder="Opção B..." style="flex:1;">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="radio" name="pt-correct" value="2" style="accent-color:var(--green);width:16px;height:16px;flex-shrink:0;">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gray);width:14px;">C</span>
+                <input class="f-input" id="pt-opt2" type="text" placeholder="Opção C..." style="flex:1;">
+              </div>
+            </div>
+          </div>
+
+          <!-- FEEDBACK -->
+          <div class="field-group" style="margin-top:10px;">
+            <span class="f-label">Feedback / Explicação</span>
+            <textarea class="f-input f-textarea" id="pt-feedback" placeholder="Por que esta é a resposta certa..."></textarea>
+          </div>
+
+          <!-- ANSWER IMAGE -->
+          <div style="margin-top:14px;">
+            <span class="f-label">📸 Foto da Resposta Correta</span>
+            <div style="font-size:10px;color:var(--gray);margin-bottom:6px;">Aparece sempre após a resposta (certa ou errada)</div>
+            <div style="display:flex;gap:8px;">
+              <input class="f-input" id="pt-ans-url" type="text" placeholder="URL da imagem..." style="flex:1;" oninput="previewAnsImg()">
+              <label style="padding:9px 14px;background:var(--dark);border:1px solid rgba(255,255,255,0.1);color:var(--gray);cursor:pointer;font-size:12px;white-space:nowrap;">
+                📁 Upload
+                <input type="file" accept="image/*" style="display:none" onchange="uploadPtImg(this,'ans')">
+              </label>
+            </div>
+            <div id="pt-ans-preview" style="margin-top:8px;width:100%;aspect-ratio:16/9;background:var(--dark3);display:none;overflow:hidden;border:1px solid rgba(74,222,128,0.2);">
+              <img id="pt-ans-img" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+          </div>
+
+          <div class="btn-row" style="margin-top:14px;">
+            <button class="btn btn-red" id="pt-save-btn" onclick="savePtQuestion()">🏆 Guardar Simulação</button>
+            <button class="btn btn-ghost" id="pt-cancel-btn" onclick="cancelPtEdit()" style="display:none;">✕ Cancelar</button>
+          </div>
+          <div class="status-msg" id="pt-status"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 Simulações Pro <span id="pt-count" style="color:var(--gray);font-size:10px;font-weight:400;"></span></div>
+          <div id="pt-list"><div style="color:var(--gray);font-size:12px;">A carregar...</div></div>
+        </div>
+      </div>
+
       <!-- VIDEOS -->
       <div class="panel" id="panel-videos">
         <div class="panel-title">Vídeos de Ajuda</div>
@@ -671,7 +789,24 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
           </div>
           <div class="field-group" style="margin-top:10px;">
             <span class="f-label">Descrição (condição para desbloquear)</span>
-            <input class="f-input" id="a-desc" type="text" placeholder="Ex: Vê 10 vídeos diários">
+            <input class="f-input" id="a-desc" type="text" placeholder="Ex: Completa 100% das simulações de Omen">
+          </div>
+          <div class="form-grid" style="margin-top:10px;">
+            <div class="field-group">
+              <span class="f-label">Trigger (como se desbloqueia)</span>
+              <select class="f-select" id="a-trigger" onchange="updateTriggerUI()">
+                <option value="manual">🎁 Manual (ADM dá ao utilizador)</option>
+                <option value="agent_complete">🧬 Completar agente (100%)</option>
+                <option value="xp_reach">⭐ Atingir X XP</option>
+                <option value="scenarios_total">🎯 Completar X cenários</option>
+                <option value="streak_days">🔥 Streak de X dias</option>
+              </select>
+            </div>
+            <div class="field-group" id="a-trigger-value-group">
+              <span class="f-label" id="a-trigger-value-label">Valor</span>
+              <input class="f-input" id="a-trigger-value" type="text" placeholder="Ex: Omen">
+              <div style="font-size:10px;color:var(--gray);margin-top:4px;" id="a-trigger-hint">Nome exato do agente (ex: Omen, Jett...)</div>
+            </div>
           </div>
           <div class="btn-row">
             <button class="btn btn-red" id="a-save-btn" onclick="saveAchievement()">🏆 Guardar Conquista</button>
@@ -770,6 +905,25 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
             <button class="btn btn-ghost" onclick="adjustCoins('set')">= Definir Valor</button>
           </div>
           <div class="status-msg" id="u-coin-status"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏆 Dar Conquista Manualmente</div>
+          <div class="form-grid">
+            <div class="field-group">
+              <span class="f-label">Username</span>
+              <input class="f-input" id="u-ach-user" type="text" placeholder="Username...">
+            </div>
+            <div class="field-group">
+              <span class="f-label">ID da Conquista</span>
+              <input class="f-input" id="u-ach-id" type="text" placeholder="Ex: omen_master">
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--gray);margin-top:6px;margin-bottom:10px;">Os IDs das conquistas cloud estão visíveis em 🏆 Conquistas. Para conquistas base usa os IDs do sistema (agent_omen, xp_500, etc.)</div>
+          <div class="btn-row">
+            <button class="btn btn-red" onclick="grantAchievement()">🏆 Dar Conquista</button>
+            <button class="btn btn-danger" onclick="revokeAchievement()">✕ Remover Conquista</button>
+          </div>
+          <div class="status-msg" id="u-ach-status"></div>
         </div>
       </div>
 
@@ -1121,6 +1275,7 @@ async function launchApp() {
 
   loadDashboard();
   loadAgentList();
+  loadPtList();
   loadScenList();
   loadCalloutList();
   loadVidList();
@@ -1355,6 +1510,9 @@ async function loadDashboard() {
     document.getElementById('stat-scenarios').textContent = (qRec?.scenarioQuestions||[]).length;
     const videos = qRec?.dailyVideos || [];
     document.getElementById('stat-videos').textContent = videos.length;
+    // Pro Trainer count in dashboard
+    const ptCount = (qRec?.proTrainer||[]).length;
+    document.getElementById('stat-scenarios').textContent = (qRec?.scenarioQuestions||[]).length + ' cen · ' + ptCount + ' pro';
     const customAgents = qRec?.customAgents || [];
 
     // Today's video
@@ -1700,6 +1858,171 @@ window.cancelCalloutEdit = () => {
 };
 
 // ============================================================
+// PRO TRAINER
+// ============================================================
+let _editingPtIdx = -1;
+let _ptSitData = null;  // base64 or null
+let _ptAnsData = null;
+
+window.previewSitImg = () => {
+  const url = document.getElementById('pt-sit-url').value.trim();
+  if (!url) { document.getElementById('pt-sit-preview').style.display='none'; return; }
+  document.getElementById('pt-sit-img').src = url;
+  document.getElementById('pt-sit-preview').style.display = '';
+  _ptSitData = null;
+};
+window.previewAnsImg = () => {
+  const url = document.getElementById('pt-ans-url').value.trim();
+  if (!url) { document.getElementById('pt-ans-preview').style.display='none'; return; }
+  document.getElementById('pt-ans-img').src = url;
+  document.getElementById('pt-ans-preview').style.display = '';
+  _ptAnsData = null;
+};
+
+window.uploadPtImg = (input, type) => {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 500*1024) { alert('Imagem demasiado grande. Máximo 500KB. Usa um URL externo (ex: imgur.com) para imagens maiores.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = e.target.result;
+    if (type === 'sit') {
+      _ptSitData = data;
+      document.getElementById('pt-sit-url').value = '';
+      document.getElementById('pt-sit-img').src = data;
+      document.getElementById('pt-sit-preview').style.display = '';
+    } else {
+      _ptAnsData = data;
+      document.getElementById('pt-ans-url').value = '';
+      document.getElementById('pt-ans-img').src = data;
+      document.getElementById('pt-ans-preview').style.display = '';
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+window.savePtQuestion = async () => {
+  const title    = document.getElementById('pt-title').value.trim();
+  const map      = document.getElementById('pt-map').value.trim();
+  const round    = document.getElementById('pt-round').value.trim();
+  const money    = document.getElementById('pt-money').value.trim();
+  const desc     = document.getElementById('pt-desc').value.trim();
+  const extra    = document.getElementById('pt-extra').value.trim();
+  const feedback = document.getElementById('pt-feedback').value.trim();
+  const correctV = document.querySelector('input[name="pt-correct"]:checked')?.value;
+  const st       = document.getElementById('pt-status');
+  const btn      = document.getElementById('pt-save-btn');
+
+  const situationImg = _ptSitData || document.getElementById('pt-sit-url').value.trim();
+  const answerImg    = _ptAnsData || document.getElementById('pt-ans-url').value.trim();
+
+  if (!title||!desc||!feedback||correctV===undefined) {
+    st.className='status-msg err'; st.textContent='Preenche título, descrição, feedback e marca a resposta correta.'; return;
+  }
+
+  const opts = [0,1,2,3].slice(0,3).map(i => ({
+    text: document.getElementById(`pt-opt${i}`).value.trim() || `Opção ${String.fromCharCode(65+i)}`,
+    correct: Number(correctV) === i
+  }));
+
+  btn.disabled=true; st.className='status-msg loading'; st.textContent='⏳ A guardar...';
+  try {
+    const qRec = await readQuiz();
+    const list = qRec?.proTrainer || [];
+    const newQ = { title, map, round, money, desc, extra, situationImg, answerImg, feedback, options: opts };
+    if (_editingPtIdx>=0) list[_editingPtIdx]=newQ;
+    else list.push(newQ);
+    await writeQuiz({...qRec, proTrainer: list});
+    st.className='status-msg ok'; st.textContent=`✅ ${_editingPtIdx>=0?'Atualizado':'Simulação criada'}!`;
+    cancelPtEdit(); loadPtList();
+    loadDashboard();
+  } catch(e) { st.className='status-msg err'; st.textContent='Erro: '+e.message; }
+  btn.disabled=false;
+};
+
+async function loadPtList() {
+  const el = document.getElementById('pt-list');
+  const countEl = document.getElementById('pt-count');
+  if (!el) return;
+  el.innerHTML='<div style="color:var(--gray);font-size:12px;">⏳ A carregar...</div>';
+  try {
+    const qRec = await readQuiz();
+    const list = qRec?.proTrainer || [];
+    if (countEl) countEl.textContent = `(${list.length} simulações)`;
+    if (!list.length) { el.innerHTML='<div style="color:var(--gray);font-size:12px;">Sem simulações Pro ainda.</div>'; return; }
+    el.innerHTML = list.map((q,i) => `
+      <div class="q-item">
+        ${q.situationImg ? `<div style="width:80px;height:45px;flex-shrink:0;background:var(--dark3);overflow:hidden;"><img src="${esc(q.situationImg)}" style="width:100%;height:100%;object-fit:cover;"></div>` : ''}
+        <div class="q-item-info">
+          <div class="q-item-title">${esc(q.title)}</div>
+          <div class="q-item-meta">${esc(q.map||'')} ${q.round?'· '+esc(q.round):''} ${q.money?'· '+esc(q.money):''}</div>
+          <div class="q-item-source cloud">☁️ Pro Trainer · #${i+1} · Certa: ${['A','B','C'][(q.options||[]).findIndex(o=>o.correct)]||'?'}</div>
+        </div>
+        <div class="q-item-actions">
+          <button class="icon-btn" onclick="editPtQuestion(${i})" title="Editar">✏️</button>
+          <button class="icon-btn del" onclick="deletePtQuestion(${i})" title="Apagar">🗑️</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML=`<div style="color:var(--red);font-size:12px;">Erro: ${e.message}</div>`; }
+}
+
+window.editPtQuestion = async (idx) => {
+  const qRec = await readQuiz();
+  const q = qRec?.proTrainer?.[idx]; if (!q) return;
+  _editingPtIdx = idx;
+  document.getElementById('pt-title').value    = q.title||'';
+  document.getElementById('pt-map').value      = q.map||'';
+  document.getElementById('pt-round').value    = q.round||'';
+  document.getElementById('pt-money').value    = q.money||'';
+  document.getElementById('pt-desc').value     = q.desc||'';
+  document.getElementById('pt-extra').value    = q.extra||'';
+  document.getElementById('pt-feedback').value = q.feedback||'';
+  (q.options||[]).forEach((o,i) => {
+    const el = document.getElementById(`pt-opt${i}`); if(el) el.value = o.text||o.t||'';
+    if (o.correct) { const r=document.querySelector(`input[name="pt-correct"][value="${i}"]`); if(r) r.checked=true; }
+  });
+  // situation img
+  if (q.situationImg) {
+    if (q.situationImg.startsWith('data:')) { _ptSitData=q.situationImg; document.getElementById('pt-sit-url').value=''; }
+    else { _ptSitData=null; document.getElementById('pt-sit-url').value=q.situationImg; }
+    document.getElementById('pt-sit-img').src=q.situationImg;
+    document.getElementById('pt-sit-preview').style.display='';
+  }
+  // answer img
+  if (q.answerImg) {
+    if (q.answerImg.startsWith('data:')) { _ptAnsData=q.answerImg; document.getElementById('pt-ans-url').value=''; }
+    else { _ptAnsData=null; document.getElementById('pt-ans-url').value=q.answerImg; }
+    document.getElementById('pt-ans-img').src=q.answerImg;
+    document.getElementById('pt-ans-preview').style.display='';
+  }
+  document.getElementById('pt-form-title').textContent='✏️ Editar Simulação Pro';
+  document.getElementById('pt-save-btn').textContent='💾 Atualizar';
+  document.getElementById('pt-cancel-btn').style.display='';
+  goPanel('protrainer'); window.scrollTo({top:0,behavior:'smooth'});
+};
+
+window.deletePtQuestion = async (idx) => {
+  if (!confirm('Apagar esta simulação Pro?')) return;
+  const qRec = await readQuiz();
+  const list = qRec?.proTrainer||[];
+  list.splice(idx,1);
+  await writeQuiz({...qRec,proTrainer:list});
+  loadPtList(); loadDashboard();
+};
+
+window.cancelPtEdit = () => {
+  _editingPtIdx=-1; _ptSitData=null; _ptAnsData=null;
+  ['pt-title','pt-map','pt-round','pt-money','pt-desc','pt-extra','pt-feedback',
+   'pt-opt0','pt-opt1','pt-opt2','pt-sit-url','pt-ans-url'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.querySelectorAll('input[name="pt-correct"]').forEach(r=>r.checked=false);
+  document.getElementById('pt-sit-preview').style.display='none';
+  document.getElementById('pt-ans-preview').style.display='none';
+  document.getElementById('pt-form-title').textContent='➕ Nova Simulação Pro';
+  document.getElementById('pt-save-btn').textContent='🏆 Guardar Simulação';
+  document.getElementById('pt-cancel-btn').style.display='none';
+  document.getElementById('pt-status').textContent='';
+};
+
+// ============================================================
 // VIDEOS
 // ============================================================
 window.switchVidTab = (tab) => {
@@ -1892,36 +2215,62 @@ async function loadAchList() {
     const achs = qRec?.achievements || [];
     if (countEl) countEl.textContent = `(${achs.length} cloud)`;
     if (!achs.length) { el.innerHTML='<div style="color:var(--gray);font-size:12px;">Sem conquistas cloud ainda.</div>'; return; }
-    el.innerHTML = achs.map((a,i) => `
-      <div class="ach-item">
+    const triggerLabels = {manual:'🎁 Manual',agent_complete:'🧬 Agente',xp_reach:'⭐ XP',scenarios_total:'🎯 Cenários',streak_days:'🔥 Streak'};
+    el.innerHTML = achs.map((a,i) => {
+      const tLabel = triggerLabels[a.trigger||'manual'] || '🎁 Manual';
+      const tVal   = a.triggerValue ? ` → ${esc(a.triggerValue)}` : '';
+      return `<div class="ach-item">
         <div class="ach-item-icon">${esc(a.icon||'🏆')}</div>
         <div class="ach-item-info">
           <div class="ach-item-name">${esc(a.name)}</div>
           <div class="ach-item-meta">${esc(a.desc)}</div>
           <div class="ach-item-cat">${esc(a.cat)} · ID: ${esc(a.id)}</div>
+          <div style="font-size:9px;color:var(--accent);margin-top:2px;letter-spacing:1px;">${tLabel}${tVal}</div>
         </div>
         <div class="q-item-actions">
           <button class="icon-btn" onclick="editAch(${i})" title="Editar">✏️</button>
           <button class="icon-btn del" onclick="deleteAch(${i})" title="Apagar">🗑️</button>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) { el.innerHTML=`<div style="color:var(--red);font-size:12px;">Erro: ${e.message}</div>`; }
 }
 
+window.updateTriggerUI = () => {
+  const trigger = document.getElementById('a-trigger').value;
+  const group   = document.getElementById('a-trigger-value-group');
+  const label   = document.getElementById('a-trigger-value-label');
+  const input   = document.getElementById('a-trigger-value');
+  const hint    = document.getElementById('a-trigger-hint');
+  if (trigger === 'manual') {
+    group.style.opacity = '0.4'; input.disabled = true;
+    hint.textContent = 'O ADM dá manualmente ao utilizador.';
+  } else {
+    group.style.opacity = '1'; input.disabled = false;
+    if (trigger === 'agent_complete') { label.textContent = 'Nome do Agente'; input.placeholder = 'Ex: Omen'; hint.textContent = 'Nome exato do agente (ex: Omen, Jett, Sage...)'; }
+    if (trigger === 'xp_reach')       { label.textContent = 'XP necessário'; input.placeholder = 'Ex: 10000'; hint.textContent = 'Utilizador precisa de atingir este total de XP'; }
+    if (trigger === 'scenarios_total'){ label.textContent = 'Nº de cenários'; input.placeholder = 'Ex: 100'; hint.textContent = 'Total de cenários completados'; }
+    if (trigger === 'streak_days')    { label.textContent = 'Nº de dias'; input.placeholder = 'Ex: 14'; hint.textContent = 'Streak consecutivo de dias'; }
+  }
+};
+
 window.saveAchievement = async () => {
-  const id   = document.getElementById('a-id').value.trim();
-  const name = document.getElementById('a-name').value.trim();
-  const icon = document.getElementById('a-icon').value.trim();
-  const cat  = document.getElementById('a-cat').value.trim();
-  const desc = document.getElementById('a-desc').value.trim();
-  const st   = document.getElementById('a-status');
-  const btn  = document.getElementById('a-save-btn');
+  const id      = document.getElementById('a-id').value.trim();
+  const name    = document.getElementById('a-name').value.trim();
+  const icon    = document.getElementById('a-icon').value.trim();
+  const cat     = document.getElementById('a-cat').value.trim();
+  const desc    = document.getElementById('a-desc').value.trim();
+  const trigger = document.getElementById('a-trigger').value;
+  const trigVal = document.getElementById('a-trigger-value').value.trim();
+  const st      = document.getElementById('a-status');
+  const btn     = document.getElementById('a-save-btn');
   if (!id||!name||!icon||!cat||!desc) { st.className='status-msg err'; st.textContent='Preenche todos os campos.'; return; }
+  if (trigger !== 'manual' && !trigVal) { st.className='status-msg err'; st.textContent='Preenche o valor do trigger.'; return; }
   btn.disabled=true; st.className='status-msg loading'; st.textContent='⏳ A guardar...';
   try {
     const qRec = await readQuiz();
     const achs = qRec?.achievements || [];
-    const newA = {id, name, icon, cat, desc};
+    const newA = {id, name, icon, cat, desc, trigger, triggerValue: trigger === 'manual' ? '' : trigVal};
     if (_editingAchIdx>=0) achs[_editingAchIdx]=newA;
     else {
       if (achs.some(a=>a.id===id)) { st.className='status-msg err'; st.textContent='ID já existe.'; btn.disabled=false; return; }
@@ -1944,6 +2293,9 @@ window.editAch = async (idx) => {
   document.getElementById('a-icon').value = a.icon||'';
   document.getElementById('a-cat').value  = a.cat||'';
   document.getElementById('a-desc').value = a.desc||'';
+  document.getElementById('a-trigger').value = a.trigger||'manual';
+  document.getElementById('a-trigger-value').value = a.triggerValue||'';
+  updateTriggerUI();
   document.getElementById('ach-form-title').textContent='✏️ Editar Conquista';
   document.getElementById('a-save-btn').textContent='💾 Atualizar';
   document.getElementById('a-cancel-btn').style.display='';
@@ -1960,11 +2312,53 @@ window.deleteAch = async (idx) => {
 
 window.cancelAchEdit = () => {
   _editingAchIdx=-1;
-  ['a-id','a-name','a-icon','a-cat','a-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['a-id','a-name','a-icon','a-cat','a-desc','a-trigger-value'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('a-trigger').value = 'manual';
+  updateTriggerUI();
   document.getElementById('ach-form-title').textContent='➕ Nova Conquista';
   document.getElementById('a-save-btn').textContent='🏆 Guardar Conquista';
   document.getElementById('a-cancel-btn').style.display='none';
   document.getElementById('a-status').textContent='';
+};
+
+// ============================================================
+// GRANT / REVOKE ACHIEVEMENT MANUALLY
+// ============================================================
+window.grantAchievement = async () => {
+  const user  = document.getElementById('u-ach-user').value.trim().toLowerCase();
+  const achId = document.getElementById('u-ach-id').value.trim();
+  const st    = document.getElementById('u-ach-status');
+  if (!user || !achId) { st.className='status-msg err'; st.textContent='Preenche username e ID da conquista.'; return; }
+  st.className='status-msg loading'; st.textContent='⏳ A dar conquista...';
+  try {
+    const idxRec = await jbinRead(FIXED_INDEX_BIN);
+    const entry  = idxRec?.users?.[user];
+    if (!entry) { st.className='status-msg err'; st.textContent='Username não encontrado.'; return; }
+    const rec = await jbinRead(entry.binId);
+    if (!rec?.profile) { st.className='status-msg err'; st.textContent='Perfil não encontrado.'; return; }
+    const achievements = [...new Set([...(rec.profile.achievements||[]), achId])];
+    await jbinUpdate(entry.binId, {profile: {...rec.profile, achievements}});
+    st.className='status-msg ok'; st.textContent=`✅ Conquista "${achId}" dada a @${user}!`;
+  } catch(e) { st.className='status-msg err'; st.textContent='Erro: '+e.message; }
+};
+
+window.revokeAchievement = async () => {
+  const user  = document.getElementById('u-ach-user').value.trim().toLowerCase();
+  const achId = document.getElementById('u-ach-id').value.trim();
+  const st    = document.getElementById('u-ach-status');
+  if (!user || !achId) { st.className='status-msg err'; st.textContent='Preenche username e ID da conquista.'; return; }
+  if (!confirm(`Remover conquista "${achId}" de @${user}?`)) return;
+  st.className='status-msg loading'; st.textContent='⏳ A remover conquista...';
+  try {
+    const idxRec = await jbinRead(FIXED_INDEX_BIN);
+    const entry  = idxRec?.users?.[user];
+    if (!entry) { st.className='status-msg err'; st.textContent='Username não encontrado.'; return; }
+    const rec = await jbinRead(entry.binId);
+    if (!rec?.profile) { st.className='status-msg err'; st.textContent='Perfil não encontrado.'; return; }
+    const achievements = (rec.profile.achievements||[]).filter(a => a !== achId);
+    await jbinUpdate(entry.binId, {profile: {...rec.profile, achievements}});
+    st.className='status-msg ok'; st.textContent=`✅ Conquista "${achId}" removida de @${user}.`;
+  } catch(e) { st.className='status-msg err'; st.textContent='Erro: '+e.message; }
 };
 
 // ============================================================

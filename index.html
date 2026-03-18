@@ -559,15 +559,16 @@ main{position:relative;z-index:5;max-width:900px;margin:0 auto;padding:20px 14px
       <p>Gasta as tuas moedas para mudar agentes ou vídeos diários.</p>
       <span class="mod-tag" style="color:var(--coin);">→ Loja</span>
     </div>
-    <div class="mod-card aim-card" onclick="openAimTrainer()" style="border-color:rgba(255,70,85,0.25);grid-column:1/-1;">
+    <div class="mod-card aim-card" onclick="openProTrainer()" style="border-color:rgba(232,201,122,0.3);grid-column:1/-1;background:linear-gradient(135deg,rgba(232,201,122,0.04),rgba(255,70,85,0.04));" id="card-protrainer">
       <div style="display:flex;align-items:center;gap:14px;">
-        <div class="mod-icon" style="font-size:28px;margin:0">🔫</div>
+        <div class="mod-icon" style="font-size:28px;margin:0">🏆</div>
         <div style="flex:1">
-          <h3 style="font-size:14px;letter-spacing:2px;color:var(--white)">Treino de Mira <span style="color:var(--red)">— AIM TRAINER</span></h3>
-          <p style="font-size:11px;color:var(--gray);margin-top:2px">Robôs 3D reais do Valorant · 5 modos</p>
+          <h3 style="font-size:14px;letter-spacing:2px;color:var(--white)">Pro Trainer <span style="color:var(--gold)">— SIMULAÇÕES PRO</span></h3>
+          <p style="font-size:11px;color:var(--gray);margin-top:2px">Cenários reais com foto · 3 opções · análise visual da resposta</p>
+          <p style="font-size:10px;color:var(--gold);margin-top:4px;letter-spacing:1px;" id="pt-lock-status">🥇 Requer GOLD IGL (600 XP)</p>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:2px;color:var(--red);text-transform:uppercase;padding:6px 14px;border:1px solid var(--red);background:rgba(255,70,85,0.08);">→ ABRIR</div>
+        <div style="text-align:right;flex-shrink:0" id="pt-card-btn">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;padding:6px 14px;border:1px solid var(--gold);background:rgba(232,201,122,0.08);">🔒 GOLD IGL</div>
         </div>
       </div>
     </div>
@@ -1130,6 +1131,23 @@ const ACHIEVEMENTS_BUILTIN = [
 let CLOUD_ACHIEVEMENTS = [];
 let ACHIEVEMENTS = [...ACHIEVEMENTS_BUILTIN];
 
+// Check cloud achievements by trigger type
+function checkCloudAchievements(triggerType, value) {
+  const relevant = CLOUD_ACHIEVEMENTS.filter(a => a.trigger === triggerType);
+  for (const a of relevant) {
+    if (unlockedAch.has(a.id)) continue;
+    let shouldUnlock = false;
+    if (triggerType === 'agent_complete') {
+      // value = agent name just completed
+      shouldUnlock = String(a.triggerValue).toLowerCase() === String(value).toLowerCase();
+    } else if (triggerType === 'xp_reach' || triggerType === 'scenarios_total' || triggerType === 'streak_days') {
+      // value = current number, triggerValue = target number
+      shouldUnlock = Number(value) >= Number(a.triggerValue);
+    }
+    if (shouldUnlock) unlockAchievement(a.id);
+  }
+}
+
 // ============================================================
 // RANKS
 // ============================================================
@@ -1186,6 +1204,17 @@ function updateHUD() {
   if(document.getElementById('ps-streak')) document.getElementById('ps-streak').textContent = currentStreak;
   if(document.getElementById('ps-ach')) document.getElementById('ps-ach').textContent = unlockedAch.size;
   if(document.getElementById('streak-days')) document.getElementById('streak-days').textContent = currentStreak;
+  // Update Pro Trainer card lock status
+  const ptLock = document.getElementById('pt-lock-status');
+  const ptBtn  = document.getElementById('pt-card-btn');
+  if (ptLock && ptBtn) {
+    const unlocked = totalXP >= 600;
+    ptLock.textContent = unlocked ? '✅ Desbloqueado' : `🥇 Requer GOLD IGL — ${totalXP}/600 XP`;
+    ptLock.style.color = unlocked ? 'var(--green)' : 'var(--gold)';
+    ptBtn.innerHTML = unlocked
+      ? '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;padding:6px 14px;border:1px solid var(--gold);background:rgba(232,201,122,0.08);">→ ABRIR</div>'
+      : '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:11px;letter-spacing:2px;color:var(--gray);text-transform:uppercase;padding:6px 14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);">🔒 GOLD IGL</div>';
+  }
 }
 
 function updateAvatars() {
@@ -1276,6 +1305,7 @@ function checkXPAchievements(xp) {
   if(xp>=500) unlockAchievement('xp_500');
   if(xp>=2000) unlockAchievement('xp_2000');
   if(xp>=5000) unlockAchievement('xp_5000');
+  checkCloudAchievements('xp_reach', xp);
 }
 
 function checkCoinAchievements(coins) {
@@ -1292,6 +1322,7 @@ function checkStreakAchievements(streak) {
   if(streak>=3) unlockAchievement('streak_3');
   if(streak>=7) unlockAchievement('streak_7');
   if(streak>=30) unlockAchievement('streak_30');
+  checkCloudAchievements('streak_days', streak);
 }
 
 async function checkScenarioAchievements(correct, total, allTimeTotal) {
@@ -1299,11 +1330,14 @@ async function checkScenarioAchievements(correct, total, allTimeTotal) {
   if(correct===total && total>=12) unlockAchievement('igl_perfect');
   if(allTimeTotal>=50) unlockAchievement('igl_veteran');
   if(allTimeTotal>=200) unlockAchievement('igl_legend');
+  checkCloudAchievements('scenarios_total', allTimeTotal);
 }
 
 async function checkAgentAchievement(agentName) {
   const allDone = AGENT_NAMES_ALL.every(name => unlockedAch.has('agent_' + name.toLowerCase().replace('/','').replace(' ','')));
   if(allDone) await unlockAchievement('agent_all');
+  // Check cloud achievements with agent_complete trigger
+  await checkCloudAchievements('agent_complete', agentName);
 }
 
 function checkVideoAchievements() {
@@ -1386,13 +1420,17 @@ function checkAdmUI() {
 }
 
 async function loadCloudQuizzes() {
-  const GITHUB_RAW = 'https://raw.githubusercontent.com/foxystudio1/TESTE-DO-VALO-TRAINER/main/quiz-data.json';
+  // Use GitHub API (more reliable than raw, no CORS issues)
+  const GITHUB_API = 'https://api.github.com/repos/foxystudio1/TESTE-DO-VALO-TRAINER/contents/quiz-data.json?ref=main';
   try {
-    // Cache bust with timestamp (floor to 2min to avoid too many requests)
-    const ts = Math.floor(Date.now() / 120000);
-    const res = await fetch(`${GITHUB_RAW}?t=${ts}`);
+    const res = await fetch(GITHUB_API, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' },
+      cache: 'no-cache'
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const rec = await res.json();
+    const file = await res.json();
+    // Decode base64 content
+    const rec = JSON.parse(decodeURIComponent(escape(atob(file.content.split('\n').join('')))));    
 
     console.log('%c[VT] quiz-data.json carregado ✅', 'color:#4ade80;font-weight:bold', rec);
 
@@ -1886,7 +1924,49 @@ window.setBnav = (id) => {
   if(el) el.classList.add('on');
 };
 
-window.openAimTrainer = () => window.open('aim-trainer.html', '_blank');
+window.openProTrainer = () => {
+  const GOLD_XP = 600;
+  if (totalXP < GOLD_XP) {
+    // Show locked modal instead of opening
+    showProTrainerLocked();
+    return;
+  }
+  window.open('pro-trainer.html', '_blank');
+};
+
+function showProTrainerLocked() {
+  // Remove existing modal if any
+  const existing = document.getElementById('modal-pt-locked');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-pt-locked';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9100;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--dark2);border:1px solid rgba(232,201,122,0.3);border-top:2px solid var(--gold);padding:28px 24px;max-width:320px;width:100%;text-align:center;">
+      <div style="font-size:48px;margin-bottom:12px;">🔒</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Pro Trainer</div>
+      <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:16px;">
+        O Pro Trainer está disponível a partir do rank<br>
+        <strong style="color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:1px;">🥇 GOLD IGL</strong><br>
+        <span style="font-size:11px;">(600 XP necessários)</span>
+      </div>
+      <div style="background:var(--dark);border:1px solid rgba(255,255,255,0.07);padding:10px 14px;margin-bottom:18px;">
+        <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:4px;">O teu progresso</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;color:var(--red);">${totalXP} / 600 XP</div>
+        <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:8px;overflow:hidden;">
+          <div style="height:100%;width:${Math.min(100,Math.round((totalXP/600)*100))}%;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:2px;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--gray);margin-top:6px;">${600-totalXP} XP para desbloquear</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('modal-pt-locked').remove();showScreen('screen-scenarios');setBnav('bn-scenarios');" style="flex:1;padding:11px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🎯 Ganhar XP</button>
+        <button onclick="document.getElementById('modal-pt-locked').remove();" style="flex:1;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Fechar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+}
 window.addFriend = () => alert('Sistema de amigos requer conta online.');
 window.copyFriendCode = () => { const code = userProfile?.friendCode || ''; navigator.clipboard?.writeText(code); };
 
