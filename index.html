@@ -1386,98 +1386,66 @@ function checkAdmUI() {
 }
 
 async function loadCloudQuizzes() {
-  const _dbg = (msg, data) => console.log('%c[VT Cloud] ' + msg, 'color:#00c8ff;font-weight:bold', data ?? '');
+  const GITHUB_RAW = 'https://raw.githubusercontent.com/foxystudio1/TESTE-DO-VALO-TRAINER/main/quiz-data.json';
   try {
-    _dbg('A ler index bin...', FIXED_INDEX_BIN_ID);
-    const idxRec = await jbinRead(FIXED_INDEX_BIN_ID);
-    _dbg('Index bin recebido:', idxRec);
+    // Cache bust with timestamp (floor to 2min to avoid too many requests)
+    const ts = Math.floor(Date.now() / 120000);
+    const res = await fetch(`${GITHUB_RAW}?t=${ts}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rec = await res.json();
 
-    let quizBinId = idxRec?.quizBinId;
-    if (!quizBinId) {
-      _dbg('Sem quizBinId — a criar quiz bin automaticamente...');
-      quizBinId = await jbinCreate({ agentQuestions:{}, scenarioQuestions:[], calloutQuestions:[], dailyVideos:[], achievements:[], ranks:[], customAgents:[] });
-      if (!quizBinId) {
-        showCloudStatus('❌ Falha ao criar quiz bin. Verifica a ligação.');
-        return;
-      }
-      await jbinUpdate(FIXED_INDEX_BIN_ID, { ...idxRec, quizBinId });
-      _dbg('Quiz bin criado:', quizBinId);
-    }
+    console.log('%c[VT] quiz-data.json carregado ✅', 'color:#4ade80;font-weight:bold', rec);
 
-    _dbg('A ler quiz bin...', quizBinId);
-    const rec = await jbinRead(quizBinId);
-    _dbg('Quiz bin recebido:', rec);
-
-    if (!rec) {
-      _dbg('Quiz bin retornou null!');
-      showCloudStatus('❌ Quiz bin retornou vazio. Verifica o JSONBin.');
-      return;
-    }
-
-    // Reset arrays before filling (avoid duplicates on re-load)
+    // Reset before fill
     ALL_SCENARIOS.length = 0;
     CALLOUT_QUESTIONS.length = 0;
     Object.values(AGENTS).forEach(ag => ag.questions.length = 0);
 
-    // Agent questions from cloud
-    const cloudAgentQs = rec?.agentQuestions || {};
+    // Agent questions
+    const cloudAgentQs = rec.agentQuestions || {};
     for (const [agent, qs] of Object.entries(cloudAgentQs)) {
-      if (AGENTS[agent]) {
-        qs.forEach(q => AGENTS[agent].questions.push({...q,_cloud:true}));
-      }
+      if (AGENTS[agent]) qs.forEach(q => AGENTS[agent].questions.push(q));
     }
 
-    // Scenarios from cloud
-    const cloudScenarios = rec?.scenarioQuestions || [];
-    cloudScenarios.forEach(s => ALL_SCENARIOS.push({...s,_cloud:true}));
+    // Scenarios
+    (rec.scenarioQuestions || []).forEach(s => ALL_SCENARIOS.push(s));
 
-    // Callouts from cloud
-    const cloudCallouts = rec?.calloutQuestions || [];
-    cloudCallouts.forEach(c => CALLOUT_QUESTIONS.push({...c,_cloud:true}));
+    // Callouts
+    (rec.calloutQuestions || []).forEach(c => CALLOUT_QUESTIONS.push(c));
 
-    // Cloud agents (custom agents created in manager)
-    const customAgents = rec?.customAgents || [];
-    customAgents.forEach(ag => {
+    // Custom agents
+    (rec.customAgents || []).forEach(ag => {
       if (!AGENTS[ag.name]) {
         AGENTS[ag.name] = { emoji: ag.emoji || '🎮', role: ag.role || 'Duelist', color: ag.color || 'duelist', questions: [] };
         if (!AGENT_NAMES_ALL.includes(ag.name)) AGENT_NAMES_ALL.push(ag.name);
       }
-      const cqs = cloudAgentQs[ag.name] || [];
-      cqs.forEach(q => AGENTS[ag.name].questions.push({...q,_cloud:true}));
+      (cloudAgentQs[ag.name] || []).forEach(q => AGENTS[ag.name].questions.push(q));
     });
 
-    // Cloud achievements and ranks
-    CLOUD_ACHIEVEMENTS = rec?.achievements || [];
-    CLOUD_RANKS = rec?.ranks || [];
+    CLOUD_ACHIEVEMENTS = rec.achievements || [];
+    CLOUD_RANKS = rec.ranks || [];
 
     const totalAgentQs = Object.values(AGENTS).reduce((s,a)=>s+a.questions.length,0);
-    _dbg(`✅ Carregado: ${ALL_SCENARIOS.length} cenários, ${CALLOUT_QUESTIONS.length} callouts, ${totalAgentQs} perguntas de agentes`);
-    showCloudStatus(`✅ ${ALL_SCENARIOS.length} cenários · ${totalAgentQs} perguntas agentes · ${CALLOUT_QUESTIONS.length} callouts`, true);
+    console.log(`%c[VT] ${ALL_SCENARIOS.length} cenários · ${totalAgentQs} perguntas agentes · ${CALLOUT_QUESTIONS.length} callouts`, 'color:#4ade80');
 
   } catch(e) {
-    console.error('[VT Cloud] ERRO:', e);
-    const isFileProtocol = location.protocol === 'file:';
-    const errMsg = isFileProtocol
-      ? '⚠️ Abre no servidor, não localmente.'
-      : `⚠️ Erro: ${e.message}`;
-    showCloudStatus(errMsg);
+    console.error('[VT] Erro ao carregar quiz-data.json:', e);
   }
 }
 
 function showCloudStatus(msg, ok=false) {
-  // Only show to ADM, or show errors to everyone
   if (!ok || isAdm()) {
     const banner = document.getElementById('daily-banner');
     if (banner) {
       const div = document.createElement('div');
       div.style.cssText = `width:100%;text-align:center;font-size:10px;color:${ok?'var(--green)':'var(--red)'};font-weight:600;padding:2px 0;letter-spacing:1px;`;
       div.textContent = msg;
-      // Remove after 8s if ok
       if (ok) setTimeout(()=>div.remove(), 8000);
       banner.appendChild(div);
     }
   }
 }
+
 
 window.admSetAgents = async () => {
   const user = document.getElementById('adm-agent-user').value.trim().toLowerCase();

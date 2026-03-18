@@ -277,6 +277,9 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
       <button class="nav-btn" id="nav-history" onclick="goPanel('history')"><span class="ni">📋</span>Histórico</button>
       <button class="nav-btn" id="nav-perms" onclick="goPanel('perms')"><span class="ni">🔑</span>Permissões</button>
       <button class="nav-btn" id="nav-requests" onclick="goPanel('requests')"><span class="ni">📩</span>Pedidos</button>
+
+      <div class="nav-section">Config</div>
+      <button class="nav-btn" id="nav-github" onclick="goPanel('github')"><span class="ni">⚙️</span>GitHub Token</button>
     </aside>
 
     <!-- CONTENT -->
@@ -830,6 +833,43 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
         </div>
       </div>
 
+      <!-- GITHUB TOKEN SETUP -->
+      <div class="panel" id="panel-github">
+        <div class="panel-title">⚙️ GitHub Token</div>
+        <div class="panel-sub">Necessário para guardar conteúdo (perguntas, vídeos, etc.) no GitHub.</div>
+        <div class="card">
+          <div class="card-title">🔑 Personal Access Token</div>
+          <div style="font-size:12px;color:var(--gray);margin-bottom:16px;line-height:1.8;">
+            1. Vai a <strong style="color:var(--accent);">github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</strong><br>
+            2. Clica <strong style="color:var(--white)">Generate new token</strong><br>
+            3. Dá um nome (ex: <em>valo-trainer</em>), seleciona o scope <strong style="color:var(--green)">repo</strong><br>
+            4. Copia o token e cola abaixo — é guardado só no teu browser
+          </div>
+          <div class="field-group" style="margin-bottom:12px;">
+            <span class="f-label">Token</span>
+            <input class="f-input" id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+          </div>
+          <div id="gh-token-status" style="font-size:11px;min-height:18px;margin-bottom:10px;"></div>
+          <div class="btn-row">
+            <button class="btn btn-red" onclick="saveGhToken()">💾 Guardar Token</button>
+            <button class="btn btn-success" onclick="testGhToken()">🔍 Testar Ligação</button>
+            <button class="btn btn-danger" onclick="clearGhToken()">🗑️ Remover Token</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Repositório Configurado</div>
+          <div style="font-size:13px;color:var(--white);margin-bottom:6px;">
+            <span style="color:var(--gray);">Repositório:</span> <span style="color:var(--accent);" id="gh-repo-display"></span>
+          </div>
+          <div style="font-size:13px;color:var(--white);margin-bottom:6px;">
+            <span style="color:var(--gray);">Ficheiro:</span> <span style="color:var(--accent);">quiz-data.json</span>
+          </div>
+          <div style="font-size:13px;">
+            <span style="color:var(--gray);">Token guardado:</span> <span id="gh-token-saved-status" style="color:var(--gray);">—</span>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -844,8 +884,16 @@ const FIXED_INDEX_BIN = '69b400e4c3097a1dd520a506';
 const LS_ADM_SESSION = 'vt_adm_session';
 const ADM_ROOT = 'teste';
 
+// GitHub quiz-data config
+const GH_OWNER = 'foxystudio1';
+const GH_REPO  = 'TESTE-DO-VALO-TRAINER';
+const GH_FILE  = 'quiz-data.json';
+const GH_BRANCH = 'main';
+const LS_GH_TOKEN = 'vt_gh_token';
+
 let _session = null;
-let _quizBinId = null;
+let _ghToken = null;
+let _ghFileSha = null;
 let _currentHistUser = null;
 let _allHistEntries = [];
 let _agentSortOrder = 'recent';
@@ -916,37 +964,100 @@ async function hashPw(pw) {
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-async function getQuizBinId() {
-  if (_quizBinId) return _quizBinId;
-  const cached = localStorage.getItem('vt_quiz_binId');
-  if (cached) { _quizBinId = cached; return cached; }
-  const rec = await jbinRead(FIXED_INDEX_BIN);
-  if (rec?.quizBinId) {
-    _quizBinId = rec.quizBinId;
-    localStorage.setItem('vt_quiz_binId', _quizBinId);
-    return _quizBinId;
-  }
-  const id = await jbinCreate({ agentQuestions:{}, scenarioQuestions:[], calloutQuestions:[], dailyVideos:[], achievements:[], ranks:[], customAgents:[] });
-  const idxRec = await jbinRead(FIXED_INDEX_BIN);
-  await jbinUpdate(FIXED_INDEX_BIN, {...idxRec, quizBinId: id});
-  localStorage.setItem('vt_quiz_binId', id);
-  _quizBinId = id;
-  return id;
+// ── GitHub quiz-data helpers ──
+function ghToken() {
+  if (_ghToken) return _ghToken;
+  _ghToken = localStorage.getItem(LS_GH_TOKEN);
+  return _ghToken;
 }
 
 async function readQuiz() {
-  const id = await getQuizBinId();
-  return await jbinRead(id);
+  const token = ghToken();
+  const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`;
+  const headers = { 'Accept': 'application/vnd.github.v3+json' };
+  if (token) headers['Authorization'] = `token ${token}`;
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`GitHub read error: ${res.status} ${res.statusText}`);
+  const file = await res.json();
+  _ghFileSha = file.sha;
+  const json = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g,'')))));
+  return json;
 }
 
 async function writeQuiz(data) {
-  const id = await getQuizBinId();
-  await jbinUpdate(id, data);
+  const token = ghToken();
+  if (!token) throw new Error('GitHub token não configurado. Vai a Configuração → Token GitHub.');
+  // Get current SHA if we don't have it
+  if (!_ghFileSha) await readQuiz();
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+  const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'Update quiz-data via ADM Manager', content, sha: _ghFileSha, branch: GH_BRANCH })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({message:res.statusText}));
+    throw new Error(`GitHub write error: ${err.message}`);
+  }
+  const result = await res.json();
+  _ghFileSha = result.content?.sha || null;
 }
 
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// GITHUB TOKEN MANAGEMENT
+// ============================================================
+window.saveGhToken = () => {
+  const val = document.getElementById('gh-token-input').value.trim();
+  if (!val || !val.startsWith('ghp_') && !val.startsWith('github_pat_')) {
+    document.getElementById('gh-token-status').style.color = 'var(--red)';
+    document.getElementById('gh-token-status').textContent = '⚠️ Token inválido. Deve começar com ghp_ ou github_pat_';
+    return;
+  }
+  localStorage.setItem(LS_GH_TOKEN, val);
+  _ghToken = val;
+  document.getElementById('gh-token-input').value = '';
+  document.getElementById('gh-token-status').style.color = 'var(--green)';
+  document.getElementById('gh-token-status').textContent = '✅ Token guardado!';
+  updateGhStatusUI();
+};
+
+window.testGhToken = async () => {
+  const st = document.getElementById('gh-token-status');
+  st.style.color = 'var(--gray)'; st.textContent = '⏳ A testar...';
+  try {
+    const data = await readQuiz();
+    st.style.color = 'var(--green)';
+    st.textContent = `✅ Ligação OK! quiz-data.json encontrado (${Object.keys(data.agentQuestions||{}).length} agentes com perguntas, ${(data.scenarioQuestions||[]).length} cenários)`;
+  } catch(e) {
+    st.style.color = 'var(--red)';
+    st.textContent = `❌ Erro: ${e.message}`;
+  }
+};
+
+window.clearGhToken = () => {
+  if (!confirm('Remover o token guardado?')) return;
+  localStorage.removeItem(LS_GH_TOKEN);
+  _ghToken = null; _ghFileSha = null;
+  document.getElementById('gh-token-status').style.color = 'var(--gray)';
+  document.getElementById('gh-token-status').textContent = 'Token removido.';
+  updateGhStatusUI();
+};
+
+function updateGhStatusUI() {
+  const saved = !!localStorage.getItem(LS_GH_TOKEN);
+  const el = document.getElementById('gh-token-saved-status');
+  if (el) {
+    el.textContent = saved ? '✅ Sim' : '❌ Não configurado';
+    el.style.color = saved ? 'var(--green)' : 'var(--red)';
+  }
+  const repoEl = document.getElementById('gh-repo-display');
+  if (repoEl) repoEl.textContent = `${GH_OWNER}/${GH_REPO} (branch: ${GH_BRANCH})`;
 }
 
 // ============================================================
@@ -989,6 +1100,21 @@ async function launchApp() {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('top-username').innerHTML = `@${esc(_session.username)}<span class="verified">✓</span>`;
+
+  // Load token status
+  updateGhStatusUI();
+  if (!ghToken()) {
+    // Show warning in dashboard
+    setTimeout(() => {
+      const card = document.querySelector('#panel-dashboard .card');
+      if (card) {
+        const warn = document.createElement('div');
+        warn.style.cssText = 'background:rgba(255,70,85,0.1);border:1px solid rgba(255,70,85,0.3);padding:12px 16px;margin-bottom:14px;font-size:12px;color:var(--red);';
+        warn.innerHTML = '⚠️ <strong>GitHub Token não configurado!</strong> Vai a <strong>⚙️ GitHub Token</strong> no menu lateral para configurar. Sem o token não é possível guardar conteúdo.';
+        card.parentNode.insertBefore(warn, card);
+      }
+    }, 500);
+  }
 
   // Load custom agents first, then populate selectors
   await loadAllAgentsIntoSelectors();
@@ -1215,6 +1341,13 @@ async function loadDashboard() {
     const idxRec = await jbinRead(FIXED_INDEX_BIN);
     const users = idxRec?.users || {};
     document.getElementById('stat-users').textContent = Object.keys(users).length;
+    // Show GitHub token status in dashboard
+    const tokenSaved = !!ghToken();
+    const ghStatusEl = document.createElement('div');
+    ghStatusEl.style.cssText = `font-size:11px;color:${tokenSaved?'var(--green)':'var(--red)'};margin-bottom:6px;`;
+    ghStatusEl.textContent = tokenSaved ? '✅ GitHub token configurado' : '❌ GitHub token não configurado — vai a ⚙️ GitHub Token';
+    document.getElementById('stat-users').closest('.stats-bar').parentNode.insertBefore(ghStatusEl, document.getElementById('stat-users').closest('.stats-bar'));
+
     const qRec = await readQuiz();
     const agentQs = qRec?.agentQuestions || {};
     const totalAQ = Object.values(agentQs).reduce((s,a)=>s+a.length,0);
