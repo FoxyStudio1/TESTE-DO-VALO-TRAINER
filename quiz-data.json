@@ -1,5 +1,32 @@
 {
-  "agentQuestions": {},
+  "agentQuestions": {
+    "Omen": [
+      {
+        "title": "2x1 Sem Spike",
+        "desc": "Estás num 2x1 na Bind e a equipa inimiga tem a spike, o que fazes?",
+        "options": [
+          {
+            "t": "Tento matar 1 e usar Ultima-te  no ceu para tentar matar o outro",
+            "c": false
+          },
+          {
+            "t": "Tento matar 1 e ir pó outro bomb e usar a Ultima-te na Spike e Planto e tento jogar com tempo",
+            "c": false
+          },
+          {
+            "t": "Ir pó outro bomb e usar a Ultima-te na Spike e Planto e me esconder para tentar matar 1 sem tomar dano",
+            "c": true
+          },
+          {
+            "t": "Tento matar 1 e ir pó outro bomb e usar a Ultima-te na Spike e Planto e tento jogar por kill",
+            "c": false
+          }
+        ],
+        "feedback": "Se estás numa situação complicada tenta sempre jogar na tua vantagem.",
+        "tip": "Podes usar a ultima-te para pegar info tmb mas nesta situação não era correta"
+      }
+    ]
+  },
   "scenarioQuestions": [],
   "calloutQuestions": [
     {
