@@ -1895,7 +1895,7 @@ window.showScreen = (id) => {
   if(id==='screen-videos') renderVideoScreen();
   if(id==='screen-profile') {
     updateHUD(); updateAvatars(); renderAchievements(); renderHistory(); checkAdmUI();
-    document.getElementById('my-friend-code').textContent = '—local—';
+    const _fcode = document.getElementById('my-friend-code'); if(_fcode) _fcode.textContent = '—local—';
   }
   if(id==='screen-groups') loadGroups();
   if(id==='screen-adm') loadAdmRequests();
