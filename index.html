@@ -1386,11 +1386,28 @@ function checkAdmUI() {
 }
 
 async function loadCloudQuizzes() {
+  const _dbg = (msg, data) => console.log('%c[VT Cloud] ' + msg, 'color:#00c8ff;font-weight:bold', data ?? '');
   try {
+    _dbg('A ler index bin...', FIXED_INDEX_BIN_ID);
     const idxRec = await jbinRead(FIXED_INDEX_BIN_ID);
+    _dbg('Index bin recebido:', idxRec);
+
     const quizBinId = idxRec?.quizBinId;
-    if (!quizBinId) return;
+    if (!quizBinId) {
+      _dbg('SEM quizBinId no index bin! O Manager ainda não foi inicializado.');
+      showCloudStatus('❌ quizBinId não encontrado. Abre o Manager uma vez para inicializar.');
+      return;
+    }
+
+    _dbg('A ler quiz bin...', quizBinId);
     const rec = await jbinRead(quizBinId);
+    _dbg('Quiz bin recebido:', rec);
+
+    if (!rec) {
+      _dbg('Quiz bin retornou null!');
+      showCloudStatus('❌ Quiz bin retornou vazio. Verifica o JSONBin.');
+      return;
+    }
 
     // Reset arrays before filling (avoid duplicates on re-load)
     ALL_SCENARIOS.length = 0;
@@ -1420,7 +1437,6 @@ async function loadCloudQuizzes() {
         AGENTS[ag.name] = { emoji: ag.emoji || '🎮', role: ag.role || 'Duelist', color: ag.color || 'duelist', questions: [] };
         if (!AGENT_NAMES_ALL.includes(ag.name)) AGENT_NAMES_ALL.push(ag.name);
       }
-      // Load cloud questions for this custom agent too
       const cqs = cloudAgentQs[ag.name] || [];
       cqs.forEach(q => AGENTS[ag.name].questions.push({...q,_cloud:true}));
     });
@@ -1428,15 +1444,33 @@ async function loadCloudQuizzes() {
     // Cloud achievements and ranks
     CLOUD_ACHIEVEMENTS = rec?.achievements || [];
     CLOUD_RANKS = rec?.ranks || [];
+
+    const totalAgentQs = Object.values(AGENTS).reduce((s,a)=>s+a.questions.length,0);
+    _dbg(`✅ Carregado: ${ALL_SCENARIOS.length} cenários, ${CALLOUT_QUESTIONS.length} callouts, ${totalAgentQs} perguntas de agentes`);
+    showCloudStatus(`✅ ${ALL_SCENARIOS.length} cenários · ${totalAgentQs} perguntas agentes · ${CALLOUT_QUESTIONS.length} callouts`, true);
+
   } catch(e) {
-    console.error('loadCloudQuizzes error:', e);
-    // Show visible error if running from file:// or network blocked
+    console.error('[VT Cloud] ERRO:', e);
     const isFileProtocol = location.protocol === 'file:';
     const errMsg = isFileProtocol
-      ? '⚠️ Abre este ficheiro no servidor (não localmente). Uploads locais bloqueiam ligações externas.'
-      : '⚠️ Erro ao ligar ao servidor de conteúdo. Verifica a tua ligação e recarrega.';
+      ? '⚠️ Abre no servidor, não localmente.'
+      : `⚠️ Erro: ${e.message}`;
+    showCloudStatus(errMsg);
+  }
+}
+
+function showCloudStatus(msg, ok=false) {
+  // Only show to ADM, or show errors to everyone
+  if (!ok || isAdm()) {
     const banner = document.getElementById('daily-banner');
-    if (banner) banner.innerHTML = `<div style="width:100%;text-align:center;font-size:12px;color:var(--red);font-weight:600;padding:4px 0;">${errMsg}</div>`;
+    if (banner) {
+      const div = document.createElement('div');
+      div.style.cssText = `width:100%;text-align:center;font-size:10px;color:${ok?'var(--green)':'var(--red)'};font-weight:600;padding:2px 0;letter-spacing:1px;`;
+      div.textContent = msg;
+      // Remove after 8s if ok
+      if (ok) setTimeout(()=>div.remove(), 8000);
+      banner.appendChild(div);
+    }
   }
 }
 
@@ -2009,7 +2043,8 @@ function initScenarios() {
     document.getElementById('quiz-container').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
       <div style="font-size:36px;margin-bottom:12px;">🎯</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Sem cenários disponíveis</div>
-      <div style="font-size:12px;">Os ADMs ainda não publicaram cenários. Volta mais tarde!</div>
+      <div style="font-size:12px;margin-bottom:16px;">Os ADMs ainda não publicaram cenários. Volta mais tarde!</div>
+      <button onclick="reloadCloud()" style="padding:10px 20px;background:var(--red);border:none;color:white;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🔄 Tentar novamente</button>
     </div>`;
     return;
   }
@@ -2070,6 +2105,7 @@ function initAgentsScreen() {
     document.getElementById('agents-showcase').innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--gray);">
       <div style="font-size:36px;margin-bottom:12px;">⏳</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;">A carregar agentes...</div>
+      <button onclick="reloadCloud()" style="margin-top:14px;padding:10px 20px;background:var(--dark2);border:1px solid rgba(255,255,255,0.15);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🔄 Recarregar</button>
     </div>`;
     return;
   }
@@ -2269,6 +2305,23 @@ function showResults(source, correct, total, xpEarned, coinsEarned, repeatFn) {
   window.scrollTo({top:0,behavior:'smooth'});
   checkCoinAchievements(totalCoins);
 }
+
+// ============================================================
+// RELOAD CLOUD (manual refresh)
+// ============================================================
+window.reloadCloud = async () => {
+  _cloudLoaded = false;
+  const active = document.querySelector('.screen.active')?.id;
+  const loadingHtml = '<div style="text-align:center;padding:40px 16px;color:var(--gray);"><div style="font-size:36px;">⏳</div></div>';
+  if (active === 'screen-scenarios') document.getElementById('quiz-container').innerHTML = loadingHtml;
+  if (active === 'screen-agents') document.getElementById('agents-showcase').innerHTML = loadingHtml;
+  if (active === 'screen-callouts') document.getElementById('callout-content').innerHTML = loadingHtml;
+  await loadCloudQuizzes();
+  _cloudLoaded = true;
+  if (active === 'screen-scenarios') initScenarios();
+  if (active === 'screen-agents')    initAgentsScreen();
+  if (active === 'screen-callouts')  initCallouts();
+};
 
 // ============================================================
 // SPLASH & INIT
