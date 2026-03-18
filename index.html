@@ -1392,11 +1392,16 @@ async function loadCloudQuizzes() {
     const idxRec = await jbinRead(FIXED_INDEX_BIN_ID);
     _dbg('Index bin recebido:', idxRec);
 
-    const quizBinId = idxRec?.quizBinId;
+    let quizBinId = idxRec?.quizBinId;
     if (!quizBinId) {
-      _dbg('SEM quizBinId no index bin! O Manager ainda não foi inicializado.');
-      showCloudStatus('❌ quizBinId não encontrado. Abre o Manager uma vez para inicializar.');
-      return;
+      _dbg('Sem quizBinId — a criar quiz bin automaticamente...');
+      quizBinId = await jbinCreate({ agentQuestions:{}, scenarioQuestions:[], calloutQuestions:[], dailyVideos:[], achievements:[], ranks:[], customAgents:[] });
+      if (!quizBinId) {
+        showCloudStatus('❌ Falha ao criar quiz bin. Verifica a ligação.');
+        return;
+      }
+      await jbinUpdate(FIXED_INDEX_BIN_ID, { ...idxRec, quizBinId });
+      _dbg('Quiz bin criado:', quizBinId);
     }
 
     _dbg('A ler quiz bin...', quizBinId);
