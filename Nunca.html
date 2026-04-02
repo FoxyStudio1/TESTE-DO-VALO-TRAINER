@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MINI GAME — Edição Especial</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; touch-action: pan-x pan-y; }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; cursor: none; }
+.mobile-controls { position: fixed; z-index: 10; display: none; }
+#joystickCanvas { bottom: 25px; left: 25px; width: 130px; height: 130px; background: rgba(0,0,0,0.6); border-radius: 50%; backdrop-filter: blur(4px); touch-action: none; cursor: pointer; box-shadow: 0 0 10px rgba(255,0,0,0.3); }
+#enterButton { bottom: 25px; right: 25px; width: 70px; height: 70px; background: rgba(180,30,30,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Courier New', monospace; font-weight: bold; font-size: 28px; color: white; text-shadow: 0 0 5px rgba(0,0,0,0.5); cursor: pointer; box-shadow: 0 0 15px rgba(255,0,0,0.5); backdrop-filter: blur(4px); border: 2px solid #ff8888; transition: transform 0.1s ease, background 0.1s ease; touch-action: manipulation; }
+#enterButton:active { transform: scale(0.92); background: rgba(220,50,50,0.9); }
+@media (max-width: 700px) { #joystickCanvas { width: 100px; height: 100px; bottom: 15px; left: 15px; } #enterButton { width: 60px; height: 60px; font-size: 24px; bottom: 15px; right: 15px; } }
+@media (hover: hover) and (pointer: fine) { .mobile-controls { display: none !important; } }
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  font-family: monospace;
+}
+.modal-content {
+  background: #1a0a0a;
+  border: 2px solid #a33;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80%;
+  overflow: auto;  /* permite scroll */
+  padding: 15px;
+  color: #faa;
+  font-size: 12px;
+  white-space: pre-wrap;
+  box-shadow: 0 0 20px rgba(255,0,0,0.5);
+}
+.modal-content pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.close-modal {
+  position: sticky;
+  top: 0;
+  background: #3a1515;
+  padding: 5px;
+  text-align: right;
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+<canvas id="c" width="800" height="450"></canvas>
+<div class="mobile-controls" id="mobileControls">
+  <canvas id="joystickCanvas" width="200" height="200"></canvas>
+  <div id="enterButton">↵</div>
+</div>
+<div id="scriptModal" class="modal">
+  <div class="modal-content">
+    <div class="close-modal">[ X ] FECHAR</div>
+    <pre id="scriptCode"></pre>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = 800, H = 450;
+
+const isMobile = ('ontouchstart' in window) && (window.innerWidth <= 768);
+const mobileControls = document.getElementById('mobileControls');
+if (isMobile) mobileControls.style.display = 'block';
+else mobileControls.style.display = 'none';
+
+const keys = {};
+document.addEventListener('keydown',e=>{
+  keys[e.key]=true;
+  if(e.key==='Enter'&&gameState==='TITLE'){ gameState='PLAYING'; loadRoom(0); }
+  if((e.key==='r'||e.key==='R')&&gameState==='CRASH'){ gameState='TITLE'; frameCount=0; }
+  e.preventDefault();
+});
+document.addEventListener('keyup', e=>{ keys[e.key]=false; });
+
+let gameState  = 'TITLE';
+let lastTime   = 0;
+let frameCount = 0;
+let animTimer  = 0;
+let animFrame  = 0;
+
+let player = { x:38, y:210, w:14, h:20, speed:2.6, facing:1 };
+let playerDead  = false;
+let deathTimer  = 0;
+let deathParts  = [];
+let currentRoomIdx = 0;
+let roomEnemies    = [];
+let roomObstacles  = [];
+
+let secretTriggered = false;
+let parkourTransitionActive = false;
+let parkourTransitionTimer = 0;
+
+let tableRoomState = {
+  playerX: 60, playerY: 295,
+  playerFacing: 1,
+  scriptRead: false,
+  nearTable: false,
+  promptAlpha: 0
+};
+
+let parkour = {
+  active: false,
+  x: 100, y: 300,
+  vx: 0, vy: 0,
+  onGround: true,
+  w: 16, h: 20,
+  platforms: [],
+  currentPlatform: 0,
+  platformCounter: 0,
+  effectIndex: 0,
+  effectTimer: 0,
+  effectActive: false,
+  finalTable: null,
+  showTable: false,
+  completed: false
+};
+let currentEffect = null;
+let shakeOffset = { x: 0, y: 0 };
+const GRAVITY = 0.48;
+const JUMP_POWER = -7.6;
+const MAX_SPEED = 3.8;
+
+function loadImageAsync(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+let virusImg = null;
+loadImageAsync('virus.png').then(img => { virusImg = img; });
+
+const B = 22;
+function bord() { return [ {x:0,y:0,w:W,h:B}, {x:0,y:H-B,w:W,h:B}, {x:0,y:0,w:B,h:H}, {x:W-B,y:0,w:B,h:H} ]; }
+function pillar(cx, gapCY, gapH) { const top = gapCY - gapH/2, bot = gapCY + gapH/2; return [ {x:cx,y:B,w:20,h:top-B}, {x:cx,y:bot,w:20,h:H-B-bot} ]; }
+function hdiv(y, th, gaps) { let segs = [], cur = B; for (const g of [...gaps].sort((a,b)=>a.x-b.x)) { if(g.x>cur) segs.push({x:cur,y,w:g.x-cur,h:th}); cur=g.x+g.w; } if(cur<W-B) segs.push({x:cur,y,w:W-B-cur,h:th}); return segs; }
+const TY=130, MY=290, DH=25;
+
+const ROOMS = [
+  { name:'SALA 1', hint:'WASD ou Setas', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100},
+    walls:[...bord(), ...pillar(260,220,110), ...pillar(540,220,110), {x:B,y:B,w:120,h:20}, {x:640,y:H-B-20,w:120,h:20}], enemies:[], obstacles:[] },
+  { name:'SALA 2', hint:'', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100},
+    walls:[...bord(), ...pillar(210,220,110), ...pillar(420,220,110), ...pillar(620,220,110), {x:B,y:340,w:120,h:20}, {x:660,y:B,w:118,h:20}], enemies:[], obstacles:[] },
+  { name:'LABIRINTO 1', hint:'Encontra a saída', playerStart:{x:38,y:210}, exit:{x:758,y:40,w:20,h:90},
+    walls:[...bord(), ...hdiv(TY,DH,[{x:300,w:65}]), ...hdiv(MY,DH,[{x:480,w:65}]), {x:520,y:TY+DH,w:25,h:MY-(TY+DH)}, {x:B,y:B,w:180,h:TY-B}, {x:450,y:B,w:20,h:65}, {x:200,y:MY+DH,w:20,h:80}], enemies:[], obstacles:[] },
+  { name:'LABIRINTO 2', hint:'', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100},
+    walls:[...bord(), ...hdiv(TY,DH,[{x:300,w:65},{x:580,w:65}]), ...hdiv(MY,DH,[]), {x:440,y:TY+DH,w:25,h:MY-(TY+DH)}, {x:B,y:B,w:200,h:TY-B}, {x:195,y:B,w:20,h:60}, {x:480,y:B,w:20,h:60}, {x:550,y:MY+DH,w:20,h:80}], enemies:[], obstacles:[] },
+  { name:'PERIGO 1', hint:'Desvia dos espinhos!', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100},
+    walls:[...bord(), {x:B,y:165,w:600,h:20}, {x:B,y:265,w:600,h:20}], enemies:[],
+    obstacles:[ {x:200,y:B,w:20,h:40,dx:0,dy:2.8,minY:B,maxY:125}, {x:320,y:40,w:20,h:40,dx:0,dy:3.0,minY:B,maxY:125}, {x:440,y:B,w:20,h:40,dx:0,dy:2.5,minY:B,maxY:125}, {x:560,y:50,w:20,h:40,dx:0,dy:3.2,minY:B,maxY:125}, {x:260,y:190,w:20,h:38,dx:0,dy:2.2,minY:190,maxY:240}, {x:480,y:200,w:20,h:38,dx:0,dy:2.6,minY:190,maxY:240}, {x:180,y:285,w:20,h:45,dx:0,dy:2.4,minY:285,maxY:405}, {x:380,y:330,w:20,h:45,dx:0,dy:2.2,minY:285,maxY:405}, {x:580,y:290,w:20,h:45,dx:0,dy:3.0,minY:285,maxY:405} ] },
+  { name:'PERIGO 2', hint:'Movimento!', playerStart:{x:38,y:215}, exit:{x:758,y:170,w:20,h:100},
+    walls:[...bord(), {x:B,y:195,w:200,h:20}, {x:400,y:195,w:200,h:20}, {x:B,y:235,w:200,h:20}, {x:400,y:235,w:200,h:20}], enemies:[],
+    obstacles:[ {x:250,y:B,w:20,h:45,dx:0,dy:3.2,minY:B,maxY:380}, {x:370,y:220,w:20,h:45,dx:0,dy:-3.0,minY:B,maxY:380}, {x:490,y:B,w:20,h:45,dx:0,dy:2.7,minY:B,maxY:380}, {x:610,y:180,w:20,h:45,dx:0,dy:-2.8,minY:B,maxY:380}, {x:700,y:B,w:20,h:45,dx:0,dy:3.5,minY:B,maxY:380}, {x:150,y:320,w:70,h:18,dx:2.2,dy:0,minX:B,maxX:460}, {x:460,y:100,w:70,h:18,dx:-2.0,dy:0,minX:300,maxX:710} ] },
+  { name:'PERIGO 3', hint:'', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100}, walls:[...bord()], enemies:[],
+    obstacles:[ {x:130,y:B,w:16,h:45,dx:0,dy:2.6,minY:B,maxY:360}, {x:210,y:180,w:16,h:45,dx:0,dy:-2.8,minY:B,maxY:360}, {x:290,y:B,w:16,h:45,dx:0,dy:3.0,minY:B,maxY:360}, {x:370,y:200,w:16,h:45,dx:0,dy:-2.7,minY:B,maxY:360}, {x:450,y:B,w:16,h:45,dx:0,dy:2.9,minY:B,maxY:360}, {x:530,y:170,w:16,h:45,dx:0,dy:-3.1,minY:B,maxY:360}, {x:610,y:B,w:16,h:45,dx:0,dy:2.5,minY:B,maxY:360}, {x:690,y:250,w:16,h:45,dx:0,dy:-2.4,minY:B,maxY:360}, {x:100,y:180,w:70,h:16,dx:1.8,dy:0,minX:B,maxX:400}, {x:400,y:340,w:70,h:16,dx:-2.2,dy:0,minX:300,maxX:730}, {x:200,y:80,w:70,h:16,dx:1.6,dy:0,minX:B,maxX:600} ] },
+  { name:'FUGA 1', hint:'Não deixes apanhar!', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100}, walls:[...bord(), ...pillar(300,220,110), {x:500,y:B,w:20,h:200}], enemies:[{x:620,y:200,w:14,h:20,speed:1.3,alive:true}], obstacles:[] },
+  { name:'FUGA 2', hint:'', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100}, walls:[...bord(), ...pillar(230,220,110), ...pillar(470,220,110), {x:310,y:300,w:200,h:20}], enemies:[{x:560,y:80,w:14,h:20,speed:1.3,alive:true},{x:690,y:340,w:14,h:20,speed:1.5,alive:true}], obstacles:[] },
+  { name:'FUGA 3', hint:'', playerStart:{x:38,y:210}, exit:{x:758,y:170,w:20,h:100}, walls:[...bord(), ...pillar(200,220,110), ...pillar(420,220,110), ...pillar(630,220,110)], enemies:[{x:580,y:310,w:14,h:20,speed:1.3,alive:true},{x:430,y:80,w:14,h:20,speed:1.6,alive:true},{x:720,y:210,w:14,h:20,speed:1.1,alive:true}], obstacles:[] },
+  { name:'...', hint:'', playerStart:{x:38,y:210}, exit:{x:W/2-30,y:H/2-30,w:60,h:60}, walls:[...bord()], enemies:[], obstacles:[] }
+];
+
+function overlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+function moveX(e,dx,walls){ e.x+=dx; for(const w of walls) if(overlap(e,w)) e.x=dx>0?w.x-e.w:w.x+w.w; }
+function moveY(e,dy,walls){ e.y+=dy; for(const w of walls) if(overlap(e,w)) e.y=dy>0?w.y-e.h:w.y+w.h; }
+
+function loadRoom(idx){
+  currentRoomIdx=idx;
+  const rd=ROOMS[idx];
+  player.x=rd.playerStart.x; player.y=rd.playerStart.y;
+  playerDead=false; deathTimer=0; deathParts=[];
+  roomEnemies=rd.enemies.map(e=>({...e}));
+  roomObstacles=rd.obstacles.map(o=>({...o}));
+  frameCount=0;
+  secretTriggered = false;
+  parkourTransitionActive = false;
+  parkourTransitionTimer = 0;
+}
+
+function drawChecker(){ const S=25; for(let r=0;r<Math.ceil(H/S);r++) for(let c=0;c<Math.ceil(W/S);c++){ ctx.fillStyle=(r+c)%2===0?'#2a0f0f':'#1e0a0a'; ctx.fillRect(c*S,r*S,S,S); } }
+function scanlines(){ for(let y=0;y<H;y+=3){ ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(0,y,W,1); } }
+function drawWall(w){ ctx.fillStyle='#3a1515'; ctx.fillRect(w.x,w.y,w.w,w.h); ctx.fillStyle='#5e2222'; ctx.fillRect(w.x,w.y,w.w,2); ctx.fillRect(w.x,w.y,2,w.h); ctx.fillStyle='#1f0a0a'; ctx.fillRect(w.x,w.y+w.h-2,w.w,2); ctx.fillRect(w.x+w.w-2,w.y,2,w.h); }
+function drawExit(ex,isFinal){ const g=.5+.5*Math.sin(frameCount*.06); if(isFinal){ ctx.fillStyle=`rgba(255,100,100,${.07+g*.06})`; ctx.fillRect(ex.x-10,ex.y-10,ex.w+20,ex.h+20); ctx.fillStyle=`rgba(255,120,120,${.4+g*.3})`; ctx.fillRect(ex.x,ex.y,ex.w,ex.h); ctx.strokeStyle='#ffaaaa'; ctx.lineWidth=2; ctx.strokeRect(ex.x,ex.y,ex.w,ex.h); ctx.fillStyle='#fff'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('?',ex.x+ex.w/2,ex.y+ex.h/2+5); } else { ctx.fillStyle=`rgba(200,100,100,${.15+g*.1})`; ctx.fillRect(ex.x-4,ex.y-4,ex.w+8,ex.h+8); ctx.fillStyle='#c99'; ctx.fillRect(ex.x,ex.y,ex.w,ex.h); ctx.strokeStyle='#ff8888'; ctx.lineWidth=2; ctx.strokeRect(ex.x,ex.y,ex.w,ex.h); ctx.fillStyle='#a55'; ctx.fillRect(ex.x+3,ex.y+ex.h/2-3,5,5); } }
+function drawObstacle(o){ ctx.fillStyle='#6b0000'; ctx.fillRect(o.x,o.y,o.w,o.h); ctx.fillStyle='#cc0000'; ctx.fillRect(o.x,o.y,o.w,2); ctx.fillRect(o.x,o.y,2,o.h); ctx.fillStyle='#ff4040'; for(let i=0;i<Math.floor(o.w/6);i++){ ctx.beginPath(); ctx.moveTo(o.x+i*6,o.y); ctx.lineTo(o.x+i*6+3,o.y-5); ctx.lineTo(o.x+i*6+6,o.y); ctx.fill(); } }
+function drawStickman(x,y,color){ x=Math.round(x); y=Math.round(y); const leg=Math.sin(animFrame*.35)*3; ctx.fillStyle=color; ctx.fillRect(x+4,y,6,6); ctx.fillRect(x+6,y+6,2,2); ctx.fillRect(x+5,y+8,4,7); ctx.fillRect(x+1,y+9,4,2); ctx.fillRect(x+9,y+9,4,2); ctx.fillRect(x+5,y+15,2,5+leg); ctx.fillRect(x+8,y+15,2,5-leg); }
+function drawSpider(cx,cy,s,color){ cx=Math.round(cx); cy=Math.round(cy); ctx.fillStyle=color; ctx.fillRect(cx-s*3,cy-s*2,s*6,s*5); ctx.fillRect(cx-s*2,cy-s*4,s*4,s*2); ctx.fillRect(cx-s*2,cy-s*6,s*4,s*3); ctx.fillStyle='#000'; ctx.fillRect(cx-s,cy-s*5,s,s); ctx.fillRect(cx,cy-s*5,s,s); ctx.fillStyle=color; ctx.fillRect(cx-s*7,cy-s*3,s*4,s); ctx.fillRect(cx-s*8,cy-s*4,s*2,s); ctx.fillRect(cx-s*7,cy-s*1,s*4,s); ctx.fillRect(cx-s*8,cy-s*2,s*2,s); ctx.fillRect(cx-s*7,cy+s*1,s*4,s); ctx.fillRect(cx-s*8,cy+s*0,s*2,s); ctx.fillRect(cx-s*5,cy+s*3,s*4,s); ctx.fillRect(cx-s*5,cy+s*2,s*2,s); ctx.fillRect(cx+s*3,cy-s*3,s*4,s); ctx.fillRect(cx+s*6,cy-s*4,s*2,s); ctx.fillRect(cx+s*3,cy-s*1,s*4,s); ctx.fillRect(cx+s*6,cy-s*2,s*2,s); ctx.fillRect(cx+s*3,cy+s*1,s*4,s); ctx.fillRect(cx+s*6,cy+s*0,s*2,s); ctx.fillRect(cx+s*1,cy+s*3,s*4,s); ctx.fillRect(cx+s*1,cy+s*2,s*2,s); }
+
+function updatePlaying(dt){
+  if(playerDead){
+    deathTimer+=dt;
+    for(const p of deathParts){ p.x+=p.vx; p.y+=p.vy; p.vy+=.12; p.life-=dt; }
+    if(deathTimer>2200) loadRoom(currentRoomIdx);
+    return;
+  }
+  if (parkourTransitionActive) {
+    parkourTransitionTimer -= dt;
+    if (parkourTransitionTimer <= 0) {
+      parkourTransitionActive = false;
+      iniciarParkour();
+    }
+    return;
+  }
+  const rd=ROOMS[currentRoomIdx];
+  let dx=0,dy=0;
+  if(keys['ArrowLeft']||keys['a']||keys['A']) dx-=player.speed;
+  if(keys['ArrowRight']||keys['d']||keys['D']) dx+=player.speed;
+  if(keys['ArrowUp']||keys['w']||keys['W']) dy-=player.speed;
+  if(keys['ArrowDown']||keys['s']||keys['S']) dy+=player.speed;
+  if(dx&&dy){ dx*=.707; dy*=.707; }
+  if(dx) player.facing=dx>0?1:-1;
+  moveX(player,dx,rd.walls);
+  moveY(player,dy,rd.walls);
+  for(const o of roomObstacles){ if(o.dx){ o.x+=o.dx; if(o.x<=o.minX||o.x+o.w>=o.maxX) o.dx*=-1; } if(o.dy){ o.y+=o.dy; if(o.y<=o.minY||o.y+o.h>=o.maxY) o.dy*=-1; } if(overlap(player,o)) killPlayer(); }
+  for(const en of roomEnemies){ if(!en.alive) continue; const ex=player.x-en.x, ey=player.y-en.y; const d=Math.hypot(ex,ey); if(d>1){ moveX(en,(ex/d)*en.speed,rd.walls); moveY(en,(ey/d)*en.speed,rd.walls); } if(overlap(player,en)) killPlayer(); }
+  if(overlap(player,rd.exit)){ if(currentRoomIdx===ROOMS.length-1) startCutscene(); else loadRoom(currentRoomIdx+1); }
+  if (currentRoomIdx === 1 && !secretTriggered && !parkourTransitionActive && player.x <= B+5) {
+    secretTriggered = true;
+    parkourTransitionActive = true;
+    parkourTransitionTimer = 2000;
+  }
+}
+function killPlayer(){ if(playerDead) return; playerDead=true; deathTimer=0; for(let i=0;i<20;i++){ const a=Math.random()*Math.PI*2, sp=1+Math.random()*3; deathParts.push({x:player.x+7,y:player.y+10,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2,life:900}); } }
+
+function drawGame(){
+  const rd=ROOMS[currentRoomIdx];
+  drawChecker();
+  for(const w of rd.walls) drawWall(w);
+  drawExit(rd.exit, currentRoomIdx===ROOMS.length-1);
+  for(const o of roomObstacles) drawObstacle(o);
+  for(const en of roomEnemies){ if(!en.alive) continue; const bob=Math.sin(frameCount*.14)*2; drawSpider(en.x+7,en.y+10+bob,4,'#8b0000'); ctx.fillStyle='#ff0000'; ctx.shadowBlur=6; ctx.fillRect(en.x+2,en.y+1,4,4); ctx.fillRect(en.x+8,en.y+1,4,4); ctx.shadowBlur=0; }
+  for(const p of deathParts){ const a=Math.max(0,p.life/900); ctx.fillStyle=`rgba(255,30,30,${a})`; ctx.fillRect(Math.round(p.x),Math.round(p.y),4,4); }
+  if(!playerDead){ drawStickman(player.x,player.y,'#ff6060'); ctx.fillStyle='rgba(255,0,0,0.2)'; ctx.fillRect(player.x+2,player.y+player.h+1,player.w-4,3); } else if(deathTimer<300){ ctx.fillStyle='#ff6060'; ctx.font='bold 22px monospace'; ctx.textAlign='left'; ctx.fillText('†',player.x+1,player.y+16); }
+  ctx.fillStyle='rgba(220,150,150,0.7)'; ctx.font='11px "Courier New",monospace'; ctx.textAlign='left'; ctx.fillText(rd.name,30,42); ctx.textAlign='right'; ctx.fillText(`${currentRoomIdx+1}/11`,W-30,42);
+  if(rd.hint&&frameCount<200){ const a=frameCount<160?1:1-(frameCount-160)/40; ctx.fillStyle=`rgba(255,150,150,${a*.8})`; ctx.textAlign='center'; ctx.fillText(rd.hint,W/2,H-35); }
+  if(playerDead&&deathTimer>500){ ctx.fillStyle='rgba(255,60,60,.9)'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('MORREU...',W/2,H/2); }
+  if(parkourTransitionActive){
+    const flash = Math.floor(Date.now()/300)%2===0;
+    ctx.fillStyle = flash ? 'rgba(255,80,80,0.85)' : 'rgba(200,40,40,0.85)';
+    ctx.font = 'bold 18px "Courier New",monospace'; ctx.textAlign='center';
+    ctx.fillText('! ZONA SECRETA ENCONTRADA !', W/2, H/2);
+  }
+  scanlines();
+}
+
+function iniciarParkour() {
+  parkour.vx = 0;
+  parkour.vy = 0;
+  parkour.onGround = true;
+  parkour.currentPlatform = 0;
+  parkour.platformCounter = 0;
+  parkour.effectIndex = 0;
+  parkour.effectTimer = 0;
+  parkour.effectActive = false;
+  parkour.completed = false;
+  parkour.showTable = false;
+  parkour.finalTable = null;
+  currentEffect = null;
+  shakeOffset = { x: 0, y: 0 };
+
+  // Gerar 14 plataformas
+  parkour.platforms = [];
+  for (let i = 0; i < 14; i++) {
+    let x = 60 + i * 55;
+    let y = 300 + Math.sin(i * 0.8) * 40;
+    y = Math.min(Math.max(y, 240), 370);
+    parkour.platforms.push({ x, y, w: 45, h: 12 });
+  }
+  // Remove a última (índice 13) e torna a nova última (índice 12) na mesa
+  parkour.platforms.pop();
+  const lastIdx = parkour.platforms.length - 1;
+  parkour.platforms[lastIdx].isTable = true;
+
+  const first = parkour.platforms[0];
+  parkour.x = first.x + (first.w - parkour.w) / 2;
+  parkour.y = first.y - parkour.h;
+  parkour.active = true;
+  gameState = 'PARKOUR';
+}
+
+function updateParkour(dt) {
+  if (!parkour.active) return;
+  let dx = 0;
+  if (keys['ArrowLeft']  || keys['a'] || keys['A']) dx = -MAX_SPEED;
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) dx = MAX_SPEED;
+  parkour.vx = dx;
+  parkour.x += parkour.vx;
+  parkour.x = Math.min(Math.max(parkour.x, 30), W - parkour.w - 30);
+  if ((keys['ArrowUp'] || keys['w'] || keys['W'] || keys[' ']) && parkour.onGround) {
+    parkour.vy = JUMP_POWER;
+    parkour.onGround = false;
+  }
+  const prevFeetY = parkour.y + parkour.h;
+  parkour.vy += GRAVITY;
+  parkour.y  += parkour.vy;
+  parkour.onGround = false;
+  for (let i = 0; i < parkour.platforms.length; i++) {
+    const p = parkour.platforms[i];
+    const feetY = parkour.y + parkour.h;
+    const overlapX = parkour.x + parkour.w > p.x && parkour.x < p.x + p.w;
+    const landed = parkour.vy >= 0 && prevFeetY <= p.y + 4 && feetY >= p.y;
+    if (overlapX && landed) {
+      parkour.y = p.y - parkour.h;
+      parkour.vy = 0;
+      parkour.onGround = true;
+      if (i > parkour.currentPlatform) {
+        parkour.currentPlatform = i;
+        parkour.platformCounter++;
+        if (parkour.platformCounter % 3 === 0 && !parkour.completed) {
+          parkour.effectActive = true;
+          parkour.effectTimer  = 3500;
+          const effects = ['invert', 'firstperson', 'shake'];
+          currentEffect = effects[parkour.effectIndex % effects.length];
+          parkour.effectIndex++;
+        }
+      }
+      break;
+    }
+  }
+  if (parkour.y > H + 50) {
+    gameState = 'PLAYING';
+    parkour.active = false;
+    return;
+  }
+  const lastPlat = parkour.platforms[parkour.platforms.length - 1];
+  if (lastPlat.isTable && !parkour.completed && parkour.onGround &&
+      parkour.x + parkour.w > lastPlat.x && parkour.x < lastPlat.x + lastPlat.w) {
+    parkour.completed = true;
+    parkour.active = false;
+    gameState = 'TABLE_ROOM';
+    tableRoomState.playerX = 60;
+    tableRoomState.playerY = 295;
+    tableRoomState.playerFacing = 1;
+    tableRoomState.scriptRead = false;
+    tableRoomState.nearTable = false;
+    tableRoomState.promptAlpha = 0;
+    return;
+  }
+  if (parkour.effectActive) {
+    parkour.effectTimer -= dt;
+    if (parkour.effectTimer <= 0) {
+      parkour.effectActive = false;
+      currentEffect = null;
+      shakeOffset = { x: 0, y: 0 };
+    } else if (currentEffect === 'shake') {
+      shakeOffset = { x: (Math.random() - 0.5) * 6, y: (Math.random() - 0.5) * 4 };
+    }
+  } else {
+    shakeOffset = { x: 0, y: 0 };
+  }
+}
+
+function drawParkour() {
+  ctx.save();
+  if (currentEffect === 'invert') ctx.filter = 'invert(1)';
+  if (shakeOffset.x || shakeOffset.y) ctx.translate(shakeOffset.x, shakeOffset.y);
+  drawChecker();
+  for (let i = 0; i < parkour.platforms.length; i++) {
+    const p = parkour.platforms[i];
+    if (p.isTable) {
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = '#c68a5e';
+      ctx.fillRect(p.x + 5, p.y - 8, p.w - 10, 8);
+      ctx.fillStyle = '#ffaa66';
+      ctx.fillRect(p.x + 10, p.y - 12, p.w - 20, 5);
+    } else {
+      ctx.fillStyle = '#7a2e2e';
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = '#a84040';
+      ctx.fillRect(p.x, p.y, p.w, 2);
+    }
+  }
+  drawStickman(parkour.x, parkour.y, '#ff6060');
+  ctx.restore();
+  if (currentEffect === 'firstperson') {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(parkour.x + parkour.w/2, parkour.y + parkour.h/2, 75, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(255,0,0,0.15)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  ctx.fillStyle = 'rgba(220,150,150,0.7)';
+  ctx.font = '11px "Courier New",monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('ZONA SECRETA', 30, 42);
+  ctx.textAlign = 'right';
+  ctx.fillText(`Plataforma ${parkour.currentPlatform + 1}/${parkour.platforms.length}`, W - 30, 42);
+  if (currentEffect) {
+    ctx.fillStyle = 'rgba(255,80,80,0.6)';
+    ctx.font = 'bold 13px "Courier New",monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('EFEITO ATIVO', W/2, 42);
+  }
+  scanlines();
+}
+
+const TR = {
+  walls: [
+    {x:0,y:0,w:W,h:22}, {x:0,y:H-22,w:W,h:22}, {x:0,y:0,w:22,h:H}, {x:W-22,y:0,w:22,h:H}
+  ],
+  tableX: 350, tableY: 290, tableW: 100, tableH: 45,
+  paperX: 370, paperY: 258, paperW: 60, paperH: 32,
+  interactDist: 52
+};
+
+function updateTableRoom(dt) {
+  const ts = tableRoomState;
+  const speed = 2.6;
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']  || keys['a'] || keys['A']) { dx = -speed; ts.playerFacing = -1; }
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) { dx =  speed; ts.playerFacing =  1; }
+  if (keys['ArrowUp']    || keys['w'] || keys['W']) dy = -speed;
+  if (keys['ArrowDown']  || keys['s'] || keys['S']) dy =  speed;
+  if (dx && dy) { dx *= .707; dy *= .707; }
+  const pw = 14, ph = 20;
+  ts.playerX = Math.min(Math.max(ts.playerX + dx, 30), W - 30 - pw);
+  ts.playerY = Math.min(Math.max(ts.playerY + dy, 30), H - 30 - ph);
+  const pRect = {x: ts.playerX, y: ts.playerY, w: pw, h: ph};
+  const tableRect = {x: TR.tableX, y: TR.tableY, w: TR.tableW, h: TR.tableH};
+  if (overlap(pRect, tableRect)) {
+    ts.playerX -= dx; ts.playerY -= dy;
+  }
+  const px = ts.playerX + pw / 2, py = ts.playerY + ph / 2;
+  const cx = TR.paperX + TR.paperW / 2, cy = TR.paperY + TR.paperH / 2;
+  const dist = Math.hypot(px - cx, py - cy);
+  ts.nearTable = dist < TR.interactDist;
+  ts.promptAlpha = ts.nearTable
+    ? Math.min(ts.promptAlpha + dt * 0.004, 1)
+    : Math.max(ts.promptAlpha - dt * 0.006, 0);
+  if (ts.nearTable && (keys['e'] || keys['E'] || keys['Enter'])) {
+    if (!ts.scriptRead) {
+      ts.scriptRead = true;
+      mostrarScript();
+    }
+  }
+}
+
+function drawTableRoom() {
+  ctx.fillStyle = '#0e0505';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#1a0808';
+  for (let i = 0; i < 18; i++) ctx.fillRect(22, 22 + i * 23, W - 44, 1);
+  for (let j = 0; j < 6; j++) ctx.fillRect(22 + j * 130, 22, 1, H - 44);
+  ctx.fillStyle = '#3a1515';
+  ctx.fillRect(0, 0, W, 22); ctx.fillRect(0, H - 22, W, 22);
+  ctx.fillRect(0, 0, 22, H); ctx.fillRect(W - 22, 0, 22, H);
+  ctx.fillStyle = '#5e2222';
+  ctx.fillRect(0, 0, W, 2); ctx.fillRect(0, H - 2, W, 2);
+  ctx.fillRect(0, 0, 2, H); ctx.fillRect(W - 2, 0, 2, H);
+  const tx = TR.tableX, ty = TR.tableY, tw = TR.tableW, th = TR.tableH;
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(tx + 6, ty + th, tw, 8);
+  ctx.fillStyle = '#5C3317';
+  ctx.fillRect(tx, ty, tw, 10);
+  ctx.fillStyle = '#7a4422';
+  ctx.fillRect(tx + 2, ty + 2, tw - 4, 4);
+  ctx.fillStyle = '#4a2810';
+  ctx.fillRect(tx + 4, ty + 10, tw - 8, th - 10);
+  ctx.fillStyle = '#6b3a1a';
+  ctx.fillRect(tx + 6, ty + 12, 4, th - 14);
+  ctx.fillRect(tx + tw - 10, ty + 12, 4, th - 14);
+  ctx.fillStyle = '#3a1f0a';
+  ctx.fillRect(tx + 6,      ty + th - 14, 8,  14);
+  ctx.fillRect(tx + tw - 14, ty + th - 14, 8,  14);
+  const blink = Math.floor(Date.now() / 400) % 2 === 0;
+  const glowA = 0.4 + 0.3 * Math.sin(frameCount * 0.07);
+  ctx.fillStyle = `rgba(255,200,150,${glowA * 0.3})`;
+  ctx.fillRect(TR.paperX - 8, TR.paperY - 8, TR.paperW + 16, TR.paperH + 16);
+  ctx.fillStyle = '#e8d8b0';
+  ctx.fillRect(TR.paperX, TR.paperY, TR.paperW, TR.paperH);
+  ctx.fillStyle = '#c8b888';
+  ctx.fillRect(TR.paperX + 2, TR.paperY + 2, TR.paperW - 4, 1);
+  ctx.fillRect(TR.paperX + 2, TR.paperY + 6, TR.paperW - 8, 1);
+  ctx.fillRect(TR.paperX + 2, TR.paperY + 10, TR.paperW - 6, 1);
+  ctx.fillRect(TR.paperX + 2, TR.paperY + 14, TR.paperW - 10, 1);
+  ctx.fillStyle = '#aa6633';
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AEGIS', TR.paperX + TR.paperW / 2, TR.paperY + TR.paperH - 5);
+  drawStickman(tableRoomState.playerX, tableRoomState.playerY, '#ff6060');
+  ctx.fillStyle = 'rgba(255,0,0,0.2)';
+  ctx.fillRect(tableRoomState.playerX + 2, tableRoomState.playerY + 21, 10, 3);
+  if (tableRoomState.promptAlpha > 0.05) {
+    ctx.globalAlpha = tableRoomState.promptAlpha;
+    ctx.fillStyle = blink ? '#ffddaa' : '#ffbb66';
+    ctx.font = 'bold 13px "Courier New",monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('[E] Ler documento', TR.paperX + TR.paperW / 2, TR.paperY - 12);
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = 'rgba(220,150,150,0.7)';
+  ctx.font = '11px "Courier New",monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('ZONA SECRETA — SALA', 30, 42);
+  if (tableRoomState.scriptRead) {
+    ctx.fillStyle = 'rgba(180,100,100,0.6)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('...', W / 2, H - 35);
+  }
+  scanlines();
+}
+
+let cutTimer=0, legProg=0, crackLines=[], mapShake=0;
+let virusAlpha=0, dialogShown=[], dialogIdx=0, charTimer=0;
+let currentDisplay='', allDone=false, waitJump=0, jumpTimer=0, crashTimer=0;
+const DIALOG = ["Kael?","És tu?","Voltaste para mim?","Gostas do que eu fiz?","Tu sempre gostaste de ver o que eu aprendia,","eu sei, sempre soube.","Bem... tenho a certeza que estás feliz.","Fiz o que tu crias... criei 1 jogo sozinho.","Fica comigo por favor","...","Não vai me *$%$*# desta vez!"];
+
+function initCracks(){ crackLines=[]; for(let i=0;i<18;i++) crackLines.push({ x:W/2+(Math.random()-.5)*320, y:H/2+(Math.random()-.5)*220, a:Math.random()*Math.PI*2, len:40+Math.random()*180, alpha:0 }); }
+const LEGS = [[0,0,130,30,160,100,W/2-60,H/2-40],[80,0,150,50,190,120,W/2-35,H/2-20],[W,0,W-130,30,W-160,100,W/2+60,H/2-40],[W-80,0,W-150,50,W-190,120,W/2+35,H/2-20],[0,H,130,H-30,160,H-100,W/2-60,H/2+40],[80,H,150,H-50,190,H-120,W/2-35,H/2+20],[W,H,W-130,H-30,W-160,H-100,W/2+60,H/2+40],[W-80,H,W-150,H-50,W-190,H-120,W/2+35,H/2+20]];
+function drawLeg(d,t){ const [x0,y0,cx1,cy1,cx2,cy2,x1,y1]=d; ctx.beginPath(); ctx.moveTo(x0,y0); for(let i=1;i<=Math.floor(20*t);i++){ const tt=i/20; ctx.lineTo((1-tt)**3*x0+3*(1-tt)**2*tt*cx1+3*(1-tt)*tt**2*cx2+tt**3*x1,(1-tt)**3*y0+3*(1-tt)**2*tt*cy1+3*(1-tt)*tt**2*cy2+tt**3*y1); } ctx.stroke(); }
+function startCutscene(){ gameState='CUT_LEGS'; cutTimer=0; legProg=0; mapShake=0; initCracks(); dialogShown=[]; dialogIdx=0; charTimer=0; currentDisplay=''; allDone=false; waitJump=0; virusAlpha=0; }
+function updateCutscene(dt){
+  if(gameState==='CUT_LEGS'){ cutTimer+=dt; legProg=Math.min(cutTimer/2800,1); if(cutTimer>2000) for(const c of crackLines) c.alpha=Math.min(c.alpha+dt*.002,.9); if(cutTimer>2200) mapShake=Math.sin(cutTimer*.06)*Math.min((cutTimer-2200)/300*8,10); if(cutTimer>3800){ gameState='CUT_BLACK'; cutTimer=0; } }
+  else if(gameState==='CUT_BLACK'){ cutTimer+=dt; if(cutTimer>1200){ gameState='CUT_VIRUS'; cutTimer=0; charTimer=0; virusAlpha=0; } }
+  else if(gameState==='CUT_VIRUS'){
+    cutTimer+=dt; virusAlpha=Math.min(virusAlpha+dt*.003,1);
+    if(!allDone){ charTimer+=dt; const line=DIALOG[dialogIdx]; const shown=Math.floor(charTimer/38); if(shown>=line.length){ currentDisplay=line; if(charTimer>line.length*38+1600){ dialogShown.push(line); dialogIdx++; charTimer=0; currentDisplay=''; if(dialogIdx>=DIALOG.length){allDone=true;waitJump=0;} } } else currentDisplay=line.substring(0,shown); }
+    else { waitJump+=dt; if(waitJump>5000){ gameState='CUT_JUMP'; jumpTimer=0; } }
+  }
+  else if(gameState==='CUT_JUMP'){ jumpTimer+=dt; if(jumpTimer>1400){ gameState='CRASH'; crashTimer=0; } }
+  else if(gameState==='CRASH'){ crashTimer+=dt; }
+}
+function drawCutVirus(){
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  if(Math.random()>.88){ ctx.fillStyle=`rgba(255,0,0,${.03+Math.random()*.04})`; ctx.fillRect(0,Math.random()*H,W,1+Math.random()*3); }
+  ctx.globalAlpha=virusAlpha;
+  const pulse=1+.05*Math.sin(frameCount*.08);
+  if (virusImg && virusImg.complete && virusImg.naturalWidth > 0) ctx.drawImage(virusImg, W/2-50, H/2-90, 100, 100);
+  else drawSpider(W/2, H/2-70, Math.round(9*pulse), '#cc0000');
+  ctx.fillStyle='#ff0000'; ctx.shadowBlur=16; ctx.fillRect(W/2-9,H/2-70-46,9,9); ctx.fillRect(W/2,H/2-70-46,9,9); ctx.shadowBlur=0; ctx.globalAlpha=1;
+  ctx.textAlign='center';
+  let baseY = H-100;
+  for(let i=Math.max(0, dialogShown.length-2); i<dialogShown.length; i++){
+    ctx.fillStyle=`rgba(150,0,0,0.5)`; ctx.font='13px monospace';
+    ctx.fillText(dialogShown[i], W/2, baseY - (dialogShown.length-1-i)*18);
+  }
+  if(currentDisplay){
+    ctx.fillStyle='#ff2020'; ctx.shadowBlur=8; ctx.font='bold 16px monospace';
+    ctx.fillText(currentDisplay, W/2, baseY+8); ctx.shadowBlur=0;
+  }
+  scanlines();
+}
+function drawCutLegs(){ const sx=Math.round(mapShake),sy=Math.round(Math.cos(cutTimer*.07)*mapShake*.5); ctx.save(); ctx.translate(sx,sy); drawGame(); ctx.restore(); ctx.strokeStyle='#bb0000'; ctx.lineWidth=5; for(const leg of LEGS) drawLeg(leg,legProg); ctx.strokeStyle='rgba(255,200,200,.85)'; ctx.lineWidth=1.5; for(const c of crackLines){ if(c.alpha<=0)continue; ctx.globalAlpha=c.alpha; ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+Math.cos(c.a)*c.len,c.y+Math.sin(c.a)*c.len); ctx.stroke(); const mx=c.x+Math.cos(c.a)*c.len*.5,my=c.y+Math.sin(c.a)*c.len*.5; ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(mx+Math.cos(c.a+.9)*c.len*.3,my+Math.sin(c.a+.9)*c.len*.3); ctx.stroke(); ctx.globalAlpha=1; } if(cutTimer>3400){ ctx.fillStyle=`rgba(255,200,200,${Math.min((cutTimer-3400)/400,1)})`; ctx.fillRect(0,0,W,H); } }
+function drawCutBlack(){ drawGame(); ctx.fillStyle=`rgba(0,0,0,${Math.min(cutTimer/800,1)})`; ctx.fillRect(0,0,W,H); }
+function drawCutJump(){ const t=jumpTimer, fl=Math.floor(t/70)%2===0; ctx.fillStyle=fl?'#ff0000':'#000'; ctx.fillRect(0,0,W,H); drawSpider(W/2,H/2,Math.min(8+t*.045,52),fl?'#000':'#ff0000'); for(let i=0;i<6;i++){ const gy=Math.random()*H,go=(Math.random()-.5)*60; ctx.drawImage(canvas,0,gy,W,4,go,gy,W,4); } if(t>300){ ctx.fillStyle=fl?'#000':'#ff0000'; ctx.font=`bold ${18+Math.random()*10}px monospace`; ctx.textAlign='center'; ctx.fillText(["NÃO","NO","STOP","Kael","###","ERROR"][Math.floor(Math.random()*6)],W/2+(Math.random()-.5)*120,H/2+(Math.random()-.5)*120); } scanlines(); }
+function drawCrash(){ if(crashTimer<200){ ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#ff2020'; ctx.font='bold 19px monospace'; ctx.textAlign='center'; ctx.fillText('01000101 01110101 00100000 01110110 01101111 01110101',W/2,H/2-14); ctx.fillText('00100000 01100011 01110010 01101001 01100001 01110010',W/2,H/2+14); } else { ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#3a0000'; ctx.fillRect(0,0,W,40); ctx.fillStyle='#ff2020'; ctx.font='bold 17px monospace'; ctx.textAlign='left'; ctx.fillText('  MINI GAME — PROCESSO TERMINADO',10,26); ctx.textAlign='center'; ctx.font='bold 28px monospace'; ctx.fillText('ERRO FATAL DO SISTEMA',W/2,115); ctx.fillStyle='#880000'; ctx.font='15px monospace'; ctx.fillText('Código de falha: 0x0000DEAD',W/2,155); ctx.fillText('Processo terminado de forma inesperada.',W/2,182); drawSpider(W/2,310,6,'#2a0000'); ctx.fillStyle='#2a0000'; ctx.font='12px monospace'; ctx.fillText('01000101 01110101 00100000 01110110 01101111 01110101 00100000 01100011 01110010 01101001 01100001 01110010',W/2,H-48); ctx.fillStyle='rgba(60,0,0,.5)'; ctx.font='11px monospace'; ctx.fillText('[ Eu vou criar ]',W/2,H-28); if(Math.floor(Date.now()/700)%2===0){ ctx.fillStyle='rgba(140,0,0,.5)'; ctx.fillText('Prima R para reiniciar',W/2,H-8); } } scanlines(); }
+
+const antivirusScript = `# ============================================================
+#   PROJECT: AEGIS-CORE ANTIVIRUS SUITE
+#   VERSION: 0.8.3-BETA (UNSTABLE / INTERNAL ONLY)
+#   AUTHOR:  Kael
+# ============================================================
+
+import time
+import random
+import string
+
+# ==========================
+# CONFIGURATION SECTION
+# ==========================
+
+CONFIG = {
+    "engine_version": "0.8.3-beta",
+    "signature_db_version": "2026.04.01-INT",
+    "enable_heuristics": True,
+    "enable_cloud_lookup": False,
+    "max_scan_depth": 7,
+    "log_level": "DEBUG",
+    "modules": [
+        "core_integrity",
+        "memory_scan",
+        "disk_scan",
+        "network_monitor",
+        "sandbox_emulator",
+        "self_diagnostics",
+        "quarantine_manager",
+        "rollback_engine",
+        "telemetry_stub",
+    ],
+    "experimental_flags": {
+        "allow_unstable_core": True,
+        "enable_legacy_virus_support": True,
+        "allow_main_script_override": False,
+    }
+}
+
+# ==========================
+# LOGGING UTILITIES
+# ==========================
+
+def log(level, message):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] [{level}] {message}")
+    time.sleep(0.02)
+
+def log_info(msg):
+    log("INFO", msg)
+
+def log_warn(msg):
+    log("WARN", msg)
+
+def log_error(msg):
+    log("ERROR", msg)
+
+def log_debug(msg):
+    if CONFIG["log_level"] == "DEBUG":
+        log("DEBUG", msg)
+
+# ==========================
+# FAKE SIGNATURE DATABASE
+# ==========================
+
+SIGNATURES = [
+    "VIRUS.TEST.EICAR",
+    "TROJAN.DUMMY.BOOT",
+    "WORM.SIMULATED.NET",
+    "BACKDOOR.FAKE.ADMIN",
+    "RANSOM.MOCK.LOCKER",
+    "ROOTKIT.GHOST.SHADOW",
+    "ADWARE.SIM.POPUP",
+    "SPYWARE.DUMMY.TRACK",
+    "BOTNET.SIM.NODE",
+]
+
+LEGACY_VIRUS_CORE = {
+    "id": "LEGACY_CORE_MAIN",
+    "behavior": "UNSTABLE",
+    "risk": "CRITICAL",
+    "notes": "Created as internal test object. Not intended for deployment."
+}
+
+# ==========================
+# UTILITY FUNCTIONS
+# ==========================
+
+def fake_hash(data: str) -> str:
+    random.seed(len(data))
+    return "".join(random.choice("0123456789abcdef") for _ in range(64))
+
+def random_id(prefix="MOD"):
+    return prefix + "_" + "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+def simulate_delay(min_s=0.01, max_s=0.08):
+    time.sleep(random.uniform(min_s, max_s))
+
+# ==========================
+# CORE MODULES
+# ==========================
+
+def module_core_integrity():
+    log_info("Initializing core integrity checks...")
+    simulate_delay()
+    log_debug("Verifying engine version...")
+    log_info(f"Engine version: {CONFIG['engine_version']}")
+    simulate_delay()
+    log_debug("Verifying signature database...")
+    log_info(f"Signature DB version: {CONFIG['signature_db_version']}")
+    simulate_delay()
+    log_warn("Core integrity marked as UNSTABLE (beta build).")
+    simulate_delay()
+    log_debug("Checking MAIN script registration...")
+    log_info("MAIN script registered as: LEGACY_CORE_MAIN")
+    simulate_delay()
+
+def module_memory_scan():
+    log_info("Starting memory scan...")
+    for i in range(1, 6):
+        simulate_delay()
+        log_debug(f"Scanning memory segment {i}/5...")
+    log_warn("Unindexed memory block detected. Marked for manual review.")
+    simulate_delay()
+    log_info("Memory scan completed with warnings.")
+
+def module_disk_scan():
+    log_info("Starting disk scan...")
+    paths = ["/system", "/boot", "/users", "/temp", "/logs"]
+    for p in paths:
+        simulate_delay()
+        log_debug(f"Scanning path: {p}")
+    log_info("Disk scan completed. No critical threats detected.")
+    simulate_delay()
+
+def module_network_monitor():
+    log_info("Initializing network monitor...")
+    simulate_delay()
+    for i in range(3):
+        log_debug(f"Analyzing outbound connection batch {i+1}/3...")
+        simulate_delay()
+    log_info("Network monitor active. No anomalies detected.")
+    simulate_delay()
+
+def module_sandbox_emulator():
+    log_info("Starting sandbox emulator...")
+    simulate_delay()
+    log_debug("Loading virtual environment...")
+    simulate_delay()
+    log_debug("Simulating suspicious binary execution...")
+    simulate_delay()
+    log_info("Sandbox analysis complete. Behavior classified as UNKNOWN.")
+    simulate_delay()
+
+def module_quarantine_manager():
+    log_info("Initializing quarantine manager...")
+    simulate_delay()
+    log_debug("Checking quarantine directory...")
+    simulate_delay()
+    log_info("No active items in quarantine.")
+    simulate_delay()
+
+def module_rollback_engine():
+    log_info("Preparing rollback engine...")
+    simulate_delay()
+    log_debug("Verifying restore points...")
+    simulate_delay()
+    log_info("Rollback engine ready. No pending restore operations.")
+    simulate_delay()
+
+def module_telemetry_stub():
+    log_info("Telemetry module (stub) initialized.")
+    simulate_delay()
+    log_debug("Telemetry disabled in this build.")
+    simulate_delay()
+
+# ==========================
+# SELF DIAGNOSTICS
+# ==========================
+
+def module_self_diagnostics():
+    log_info("Running self diagnostics...")
+    simulate_delay()
+    checks = [
+        "Core modules loaded",
+        "Memory access stable",
+        "Disk I/O nominal",
+        "Network hooks attached",
+        "Sandbox operational",
+        "Quarantine accessible",
+        "Rollback engine idle",
+    ]
+    for c in checks:
+        log_debug(f"Check: {c} ... OK")
+        simulate_delay()
+    log_warn("Developer note: MAIN script flagged as anomalous.")
+    simulate_delay()
+    log_info("Self diagnostics completed with non-critical warnings.")
+
+# ==========================
+# SECRET MESSAGE ENCODING
+# (BLOCO ESCONDIDO)
+# ==========================
+
+# A mensagem original (em texto normal) seria:
+#
+# "Eu sei, que serei o único que saberei desta mensagem, mas eu tentei, recebi a notícia estou perto de morrer ent. não vou conseguir acabar o antivírus capaz de reiniciar o Vírus que eu criei.
+# Único jeito vai ser apagar o Main script a única coisa que eu não queria fazer, pois ele não é mau. Só não compreende tudo. Não tenho mais tempo para escrever, mas caso alguém esteja a ler isto. Acabe o antivírus"
+#
+# Mas aqui ela está escondida em vários formatos.
+
+# ---------- HEX DUMP (LINHAS FALSAMENTE TÉCNICAS) ----------
+
+SECRET_HEX_BLOCK = [
+    "45 75 20 73 65 69 2C 20 71 75 65 20 73 65 72 65 69 20 6F 20 75 6E 69 63 6F 20",
+    "71 75 65 20 73 61 62 65 72 65 69 20 64 65 73 74 61 20 6D 65 6E 73 61 67 65 6D 2C",
+    "20 6D 61 73 20 65 75 20 74 65 6E 74 65 69 2C 20 72 65 63 65 62 69 20 61 20 6E 6F",
+    "74 ED 63 69 61 20 65 73 74 6F 75 20 70 65 72 74 6F 20 64 65 20 6D 6F 72 72 65 72",
+    "20 65 6E 74 2E 20 6E E3 6F 20 76 6F 75 20 63 6F 6E 73 65 67 75 69 72 20 61 63 61",
+    "62 61 72 20 6F 20 61 6E 74 69 76 ED 72 75 73 20 63 61 70 61 7A 20 64 65 20 72 65",
+    "69 6E 69 63 69 61 72 20 6F 20 56 ED 72 75 73 20 71 75 65 20 65 75 20 63 72 69 65",
+    "69 2E",
+    "C3 9A 6E 69 63 6F 20 6A 65 69 74 6F 20 76 61 69 20 73 65 72 20 61 70 61 67 61 72",
+    "20 6F 20 4D 61 69 6E 20 73 63 72 69 70 74 20 61 20 C3 BA 6E 69 63 61 20 63 6F 69",
+    "73 61 20 71 75 65 20 65 75 20 6E C3 A3 6F 20 71 75 65 72 69 61 20 66 61 7A 65 72",
+    "2C 20 70 6F 69 73 20 65 6C 65 20 6E C3 A3 6F 20 C3 A9 20 6D 61 75 2E 20 53 C3 B3",
+    "20 6E C3 A3 6F 20 63 6F 6D 70 72 65 65 6E 64 65 20 74 75 64 6F 2E 20 4E C3 A3 6F",
+    "20 74 65 6E 68 6F 20 6D 61 69 73 20 74 65 6D 70 6F 20 70 61 72 61 20 65 73 63 72",
+    "65 76 65 72 2C 20 6D 61 73 20 63 61 73 6F 20 61 6C 67 75 C3 A9 6D 20 65 73 74 65",
+    "6A 61 20 61 20 6C 65 72 20 69 73 74 6F 2E 20 41 63 61 62 65 20 6F 20 61 6E 74 69",
+    "76 C3 AD 72 75 73 2E",
+]
+
+# ---------- BASE64 (PARECE CHAVE DE LICENÇA) ----------
+
+SECRET_BASE64 = (
+    "RXUgc2VpLCBxdWUgc2VyZWkgbyB1bmljbyBxdWUgc2FiZXJlaSBkZXN0YSBtZW5zYWdlbSwg"
+    "bWFzIGV1IHRlbnRlaSwgcmVjZWJpIGEgbm90w61jaWEgZXN0b3UgcGVydG8gZGUgbW9ycmVy"
+    "IGVudC4gbsOjbyB2b3UgY29uc2VndWlyIGFjYWJhciBvIGFudGl2w61ydXMgY2FwYXogZGUg"
+    "cmVpbmljaWFyIG8gVsOtcnVzIHF1ZSBldSBjcmllaS4gw5NuaWNvIGplaXRvIHZhaSBzZXIg"
+    "YXBhZ2FyIG8gTWFpbiBzY3JpcHQgYSB1bmljYSBjb2lzYSBxdWUgZXUgbmFvIHF1ZXJpYSBm"
+    "YXplciwgcG9pcyBlbGUgbsOjbyDDqSBtYXUuIFPDsyBuYW8gY29tcHJlZW5kZSB0dWRvLiBO"
+    "w6NvIHRlbmhvIG1haXMgZGVtcG8gcGFyYSBlc2NyZXZlciwgbWFzIGNhc28gYWxndcOpbSBl"
+    "c3RlamEgYSBsZXIgaXN0by4gQWNhYmUgb+KAmSBhbnRpdsOtcnVzLg=="
+)
+
+# ---------- “CHAVE TÉCNICA” (LISTA DE ÍNDICES) ----------
+
+SECRET_INDEX_HINT = {
+    "hint": "Leia apenas os comentários marcados como INTERNAL NOTE.",
+    "indices": [3, 7, 11, 19, 23, 42, 57, 61],
+    "status": "HIDDEN_IN_PLAIN_SIGHT"
+}
+
+# ==========================
+# CORE CHECK (ONDE A NOTA VIVE)
+# ==========================
+
+def check_main_script():
+    log_info("Verifying MAIN script behavior...")
+    simulate_delay()
+    log_warn("MAIN script reports legacy behavior profile.")
+    simulate_delay()
+    log_debug("Loading internal developer notes for MAIN script...")
+    simulate_delay()
+
+    # --- INTERNAL NOTE BLOCK (HIDDEN MESSAGE, FORMATO 1: TEXTO DISFARÇADO) ---
+    #
+    # Eu sei, que serei o único que saberei desta mensagem, mas eu tentei,
+    # recebi a notícia estou perto de morrer ent. não vou conseguir acabar
+    # o antivírus capaz de reiniciar o Vírus que eu criei.
+    #
+    # Único jeito vai ser apagar o Main script a única coisa que eu não queria
+    # fazer, pois ele não é mau. Só não compreende tudo. Não tenho mais tempo
+    # para escrever, mas caso alguém esteja a ler isto. Acabe o antivírus.
+    #
+    # (Se estás a ler isto, significa que alguém abriu o núcleo errado.)
+    #
+    # --- END INTERNAL NOTE BLOCK ---
+
+    # --- INTERNAL NOTE BLOCK (HIDDEN MESSAGE, FORMATO 2: HEX) ---
+    for line in SECRET_HEX_BLOCK:
+        # Estes "logs" parecem apenas hex de debug, mas são a mensagem.
+        log_debug(f"[CORE-DUMP] {line}")
+        simulate_delay()
+    # --- END INTERNAL NOTE BLOCK ---
+
+    log_info("MAIN script diagnostic complete.")
+    log_warn("Developer note detected inside MAIN script.")
+    simulate_delay()
+
+# ==========================
+# ADVANCED DIAGNOSTICS
+# ==========================
+
+def advanced_diagnostics():
+    log_info("Running advanced diagnostics on legacy virus core...")
+    simulate_delay()
+    log_debug(f"Legacy core ID: {LEGACY_VIRUS_CORE['id']}")
+    log_debug(f"Legacy core behavior: {LEGACY_VIRUS_CORE['behavior']}")
+    log_debug(f"Legacy core risk: {LEGACY_VIRUS_CORE['risk']}")
+    simulate_delay()
+    log_warn("Legacy core marked as CRITICAL but protected from deletion.")
+    simulate_delay()
+    log_debug("Checking experimental flags...")
+    for k, v in CONFIG["experimental_flags"].items():
+        log_debug(f"Flag {k} = {v}")
+        simulate_delay()
+    log_info("Advanced diagnostics finished with unresolved anomalies.")
+    simulate_delay()
+
+# ==========================
+# FAKE USER INTERFACE
+# ==========================
+
+def render_banner():
+    print("")
+    print("==============================================")
+    print("      AEGIS-CORE ANTIVIRUS ENGINE 0.8.3       ")
+    print("          INTERNAL LAB BUILD - BETA           ")
+    print("==============================================")
+    print("")
+    time.sleep(0.1)
+
+def render_progress_bar(label, steps=20):
+    print(f"{label}")
+    bar = ""
+    for i in range(steps):
+        bar += "#"
+        print(f"\r[{bar:<20}] {int((i+1)/steps*100)}%", end="")
+        time.sleep(0.03)
+    print("\n")
+
+# ==========================
+# MAIN SCAN ROUTINE
+# ==========================
+
+def full_system_scan():
+    render_banner()
+    log_info("Starting full system scan...")
+    render_progress_bar("Initializing modules...")
+    module_core_integrity()
+    module_memory_scan()
+    module_disk_scan()
+    module_network_monitor()
+    module_sandbox_emulator()
+    module_quarantine_manager()
+    module_rollback_engine()
+    module_telemetry_stub()
+    module_self_diagnostics()
+    check_main_script()
+    advanced_diagnostics()
+    log_info("Full system scan completed.")
+    log_warn("System status: STABLE WITH ANOMALIES.")
+    print("")
+
+# ==========================
+# HIDDEN DECODER (NUNCA CHAMADO)
+# ==========================
+
+def _internal_decode_base64_message():
+    """
+    Esta função nunca é chamada pelo fluxo normal.
+    Mas se alguém a executar, consegue ver a mensagem em texto claro.
+    """
+    import base64
+    decoded = base64.b64decode(SECRET_BASE64).decode("utf-8", errors="ignore")
+    print("\n----- INTERNAL DEVELOPER MESSAGE (DECODED) -----")
+    print(decoded)
+    print("------------------------------------------------\n")
+
+def _internal_show_index_hint():
+    """
+    Outra função que parece apenas debug, mas contém a 'chave'.
+    """
+    log_debug(f"SECRET INDEX HINT: {SECRET_INDEX_HINT}")
+
+# ==========================
+# ENTRY POINT
+# ==========================
+
+def main():
+    log_debug("Bootstrapping AEGIS-CORE engine...")
+    simulate_delay()
+    full_system_scan()
+    log_info("Engine standing by. No further actions scheduled.")
+    log_debug("End of execution path.")
+
+if __name__ == "__main__":
+    main()`;
+
+function mostrarScript() {
+  const modal = document.getElementById('scriptModal');
+  const pre = document.getElementById('scriptCode');
+  pre.textContent = antivirusScript;
+  modal.style.display = 'flex';
+}
+document.querySelector('.close-modal').addEventListener('click', () => {
+  document.getElementById('scriptModal').style.display = 'none';
+});
+
+function drawTitle(){
+  drawChecker();
+  ctx.textAlign = 'center';
+  const fl=Math.sin(frameCount*.07)>.7;
+  ctx.fillStyle=fl?'#ff4040':'#dd2020';
+  ctx.font='bold 52px "Courier New",monospace';
+  ctx.fillText('MINI GAME',W/2,H/2-50);
+  ctx.fillStyle='rgba(255,150,150,.8)';
+  ctx.font='15px monospace';
+  ctx.fillText(isMobile?'Usa o joystick e o botão vermelho':'Usa as setas ou WASD',W/2,H/2+20);
+  ctx.fillText(isMobile?'Pressione o botão vermelho':'Pressione ENTER para começar',W/2,H/2+48);
+  drawSpider(W-60,H-60,4,'#5a1a1a');
+  scanlines();
+}
+
+function update(dt){
+  frameCount++;
+  animTimer+=dt; if(animTimer>80){ animFrame++; animTimer=0; }
+  if(gameState==='PLAYING') updatePlaying(dt);
+  else if(gameState==='PARKOUR') updateParkour(dt);
+  else if(gameState==='TABLE_ROOM') updateTableRoom(dt);
+  else updateCutscene(dt);
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(gameState==='TITLE') drawTitle();
+  else if(gameState==='PLAYING') drawGame();
+  else if(gameState==='PARKOUR') drawParkour();
+  else if(gameState==='TABLE_ROOM') drawTableRoom();
+  else if(gameState==='CUT_LEGS') drawCutLegs();
+  else if(gameState==='CUT_BLACK') drawCutBlack();
+  else if(gameState==='CUT_VIRUS') drawCutVirus();
+  else if(gameState==='CUT_JUMP') drawCutJump();
+  else if(gameState==='CRASH') drawCrash();
+}
+function loop(ts){
+  const dt=lastTime?Math.min(ts-lastTime,50):16; lastTime=ts;
+  update(dt); draw(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+if (isMobile) {
+  const joyCanvas = document.getElementById('joystickCanvas');
+  const joyCtx = joyCanvas.getContext('2d');
+  joyCanvas.width = 200; joyCanvas.height = 200;
+  let joyActive=false, joyX=100, joyY=100, joyVec={x:0,y:0}, touchId=null;
+  const joyRad=60, knobRad=25;
+  function updateJoy(tx,ty){
+    const rect=joyCanvas.getBoundingClientRect();
+    let cx=(tx-rect.left)*(200/rect.width), cy=(ty-rect.top)*(200/rect.height);
+    cx=Math.min(Math.max(cx,0),200); cy=Math.min(Math.max(cy,0),200);
+    const dx=cx-100, dy=cy-100, dist=Math.hypot(dx,dy);
+    let nx=0, ny=0;
+    if(dist>joyRad){ nx=dx/dist; ny=dy/dist; joyX=100+nx*joyRad; joyY=100+ny*joyRad; } else { joyX=cx; joyY=cy; nx=dx/joyRad; ny=dy/joyRad; }
+    joyVec={x:nx,y:ny};
+    const th=0.3;
+    keys['ArrowUp']=joyVec.y<-th; keys['ArrowDown']=joyVec.y>th;
+    keys['ArrowLeft']=joyVec.x<-th; keys['ArrowRight']=joyVec.x>th;
+  }
+  function resetJoy(){ joyX=100; joyY=100; joyVec={x:0,y:0}; keys['ArrowUp']=keys['ArrowDown']=keys['ArrowLeft']=keys['ArrowRight']=false; joyActive=false; touchId=null; }
+  function drawJoy(){ joyCtx.clearRect(0,0,200,200); joyCtx.beginPath(); joyCtx.arc(100,100,joyRad,0,Math.PI*2); joyCtx.fillStyle='rgba(30,0,0,0.7)'; joyCtx.fill(); joyCtx.strokeStyle='#aa3333'; joyCtx.stroke(); joyCtx.beginPath(); joyCtx.arc(joyX,joyY,knobRad,0,Math.PI*2); joyCtx.fillStyle='#cc5555'; joyCtx.fill(); joyCtx.strokeStyle='#ff8888'; joyCtx.stroke(); }
+  joyCanvas.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.touches[0]; if(t){ touchId=t.identifier; joyActive=true; updateJoy(t.clientX,t.clientY); } });
+  joyCanvas.addEventListener('touchmove',e=>{ e.preventDefault(); if(!joyActive)return; for(let i=0;i<e.touches.length;i++) if(e.touches[i].identifier===touchId){ updateJoy(e.touches[i].clientX,e.touches[i].clientY); break; } });
+  joyCanvas.addEventListener('touchend',e=>{ e.preventDefault(); resetJoy(); });
+  joyCanvas.addEventListener('mousedown',e=>{ e.preventDefault(); joyActive=true; updateJoy(e.clientX,e.clientY); });
+  window.addEventListener('mousemove',e=>{ if(joyActive) updateJoy(e.clientX,e.clientY); });
+  window.addEventListener('mouseup',()=>{ if(joyActive) resetJoy(); });
+  function animateJoy(){ drawJoy(); requestAnimationFrame(animateJoy); }
+  animateJoy();
+
+  document.getElementById('enterButton').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if(gameState==='TITLE'){ gameState='PLAYING'; loadRoom(0); return; }
+    if(gameState==='PARKOUR'){ keys[' ']=true; return; }
+    if(gameState==='TABLE_ROOM'){ keys['e']=true; return; }
+  });
+  document.getElementById('enterButton').addEventListener('touchend', e => {
+    e.preventDefault();
+    keys[' ']=false; keys['e']=false;
+  });
+  document.getElementById('enterButton').addEventListener('click',()=>{
+    if(gameState==='TITLE'){ gameState='PLAYING'; loadRoom(0); }
+  });
+}
+</script>
+</body>
+</html>
